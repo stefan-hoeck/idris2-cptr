@@ -28,6 +28,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build lib
-        run: pack --no-prompt install cptr
+        run: pack --verbose --no-prompt install cptr
       - name: Test lib
-        run: pack --no-prompt test cptr
+        run: pack --verbose --no-prompt test cptr
