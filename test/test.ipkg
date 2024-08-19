@@ -4,6 +4,7 @@ authors = "stefan-hoeck"
 
 depends = base >= 0.7.0
         , cptr
+        , hedgehog
 
 sourcedir = "src"
 

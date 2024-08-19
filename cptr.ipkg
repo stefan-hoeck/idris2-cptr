@@ -7,7 +7,10 @@ depends = base >= 0.6.0
         , ref1
         , array
 
-modules = Data.C.Integer
+modules = Data.C.Array
+        , Data.C.Deref
+        , Data.C.Integer
+        , Data.C.Ptr
         , Data.C.SizeOf
 
 sourcedir = "src"
@@ -15,3 +18,5 @@ sourcedir = "src"
 prebuild = "bash gencode.sh"
 
 postbuild = "bash cleanup.sh"
+
+preinstall = "make -C support install"
