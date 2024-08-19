@@ -3,13 +3,13 @@
 void *utype(char *name, size_t sz) {
   printf("\npublic export\n");
   printf("0 %s : Type\n", name);
-  printf("%s = Bits%d\n", name, 8*sz);
+  printf("%s = Bits%zd\n", name, 8*sz);
 }
 
 void *stype(char *name, size_t sz) {
   printf("\npublic export\n");
   printf("0 %s : Type\n", name);
-  printf("%s = Int%d\n", name, 8*sz);
+  printf("%s = Int%zd\n", name, 8*sz);
 }
 
 void *main() {
