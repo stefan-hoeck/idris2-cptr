@@ -1,0 +1,54 @@
+package uv
+version = 0.1.0
+authors = "stefan-hoeck"
+brief   = "Idris2 bindings to libuv"
+
+depends = base >= 0.6.0
+        , uv-data
+        , elab-util
+        , bytestring
+        , quantifiers-extra
+        , containers
+
+modules = IO.Async
+        , IO.Async.Event
+        , IO.Async.Fiber
+        , IO.Async.MVar
+        , IO.Async.Outcome
+        , IO.Async.Resource
+        , IO.Async.Token
+
+        , System.UV
+        , System.UV.DNS
+        , System.UV.File
+        , System.UV.Idle
+        , System.UV.Loop
+        , System.UV.Pipe
+        , System.UV.Pointer
+        , System.UV.Signal
+        , System.UV.Stream
+        , System.UV.TCP
+        , System.UV.Timer
+        , System.UV.Util
+        , System.UV.Work
+
+        , System.UV.Raw.Async
+        , System.UV.Raw.Callback
+        , System.UV.Raw.File
+        , System.UV.Raw.Handle
+        , System.UV.Raw.Idle
+        , System.UV.Raw.Loop
+        , System.UV.Raw.Pipe
+        , System.UV.Raw.Pointer
+        , System.UV.Raw.Req
+        , System.UV.Raw.Signal
+        , System.UV.Raw.Stream
+        , System.UV.Raw.TCP
+        , System.UV.Raw.Timer
+        , System.UV.Raw.Util
+
+sourcedir = "src"
+
+prebuild = "make -C support"
+
+preinstall = "make -C support install"

@@ -1,0 +1,6 @@
+build/
+*.*~
+lib/
+support/cptr.o
+support/cptr-idris
+codegen/integer_gen
