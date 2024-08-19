@@ -9,6 +9,10 @@ public export
 interface SizeOf a where
   sizeof_ : Nat
 
+public export %inline
+sizeof : (0 a : Type) -> SizeOf a => Nat
+sizeof a = sizeof_ {a}
+
 --------------------------------------------------------------------------------
 -- Implementations
 --------------------------------------------------------------------------------

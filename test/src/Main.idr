@@ -1,6 +1,11 @@
 module Main
 
+import Ptr
+import Hedgehog
+
 %default total
 
 main : IO ()
-main = putStrLn "cptr test"
+main =
+  test
+    [ Ptr.props ]
