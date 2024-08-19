@@ -32,6 +32,6 @@ jobs:
           apt-get update
           apt-get install --yes git
       - name: Build lib
-        run: pack --no-prompt install cptr
+        run: pack --no-prompt typecheck cptr
       - name: Test lib
         run: pack --no-prompt test cptr
