@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-if [ "$(
-    git status >/dev/null 2>&1
-    echo $?
-)" -eq 0 ]; then
-    git restore src/Data/C/Integer.idr
-fi
+echo "cleaning up generated code"
+
+mv tmp/Integer.idr src/Data/C/Integer.idr
+rm -r tmp
+
+echo "cleaned up generated code"
