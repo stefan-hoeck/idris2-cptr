@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+echo "cleaning up generated code"
+
 if [ "$(
     git status >/dev/null 2>&1
     echo $?
