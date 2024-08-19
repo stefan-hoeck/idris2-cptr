@@ -1,4 +1,4 @@
-LDFLAGS = -l
+LDFLAGS =
 CPPFLAGS =
 
 CC_VERSION = $(shell $(CC) --version)
@@ -10,8 +10,9 @@ else
 	LDFLAGS += -fuse-ld=gold
 endif
 
+.PHONY: all
 all: integer_gen
 
-.PHONY: sig_gen
+.PHONY: integer_gen
 integer_gen:
 	$(CC) $(LDFLAGS) -o integer_gen integer.c

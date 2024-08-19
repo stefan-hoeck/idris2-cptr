@@ -1,0 +1,5 @@
+[custom.all.cptr]
+type = "local"
+path = "."
+ipkg = "cptr.ipkg"
+test = "test/test.ipkg"

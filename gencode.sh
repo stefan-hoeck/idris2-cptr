@@ -2,4 +2,4 @@
 
 make -C codegen all
 
-codegen/integer_gen >> src/Data/C/Integer.idr
+codegen/integer_gen >>src/Data/C/Integer.idr

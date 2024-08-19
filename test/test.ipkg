@@ -1,0 +1,12 @@
+package cptr-test
+version = 0.1.0
+authors = "stefan-hoeck"
+
+depends = base >= 0.7.0
+        , cptr
+
+sourcedir = "src"
+
+main = Main
+
+executable = "cptr-test"
