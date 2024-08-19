@@ -12,4 +12,6 @@ modules = Data.C.Integer
 
 sourcedir = "src"
 
+prebuild = "./gencode.sh"
+
 postbuild = "./cleanup.sh"

@@ -25,4 +25,6 @@ void *main() {
 
   stype("SsizeT", sizeof(ssize_t));
   utype("SizeT", sizeof(size_t));
+
+  return 0;
 }
