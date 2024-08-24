@@ -12,6 +12,7 @@ modules = Data.C.Array
         , Data.C.Integer
         , Data.C.Ptr
         , Data.C.SizeOf
+        , Data.C.Struct
 
 sourcedir = "src"
 

@@ -8,103 +8,172 @@ import Data.Linear.Ref1
 import public Data.Fin
 import public Data.Array.Index
 
+import Syntax.T1
+
 %default total
 
 --------------------------------------------------------------------------------
 -- FFI
 --------------------------------------------------------------------------------
 
-%foreign "C:idris2_malloc, libidris2_support, idris_memory.h"
-prim__malloc : (size : SizeT) -> PrimIO AnyPtr
+%foreign "C:cptr_malloc, cptr-idris"
+prim__malloc : (size : SizeT) -> AnyPtr
 
-%foreign "C:idris2_free, libidris2_support, idris_memory.h"
+%foreign "C:cptr_calloc, cptr-idris"
+prim__calloc : (n, size : SizeT) -> AnyPtr
+
+%foreign "C:cptr_free, cptr-idris"
 prim__free : AnyPtr -> PrimIO ()
 
 %foreign "C:cptr_inc_ptr, cptr-idris"
 prim__inc_ptr : AnyPtr -> SizeT -> AnyPtr
 
 --------------------------------------------------------------------------------
--- API
+-- IO-API
 --------------------------------------------------------------------------------
 
-export
-record CArray (n : Nat) (a : Type) where
-  constructor CA
-  ptr : AnyPtr
+namespace IO
 
-export %inline
-malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> IO (CArray n a)
-malloc a n = believe_me $ fromPrim $ prim__malloc (cast $ n * sizeof a)
+  export
+  record CArrayIO (n : Nat) (a : Type) where
+    constructor CAIO
+    ptr : AnyPtr
 
-export %inline
-free : CArray n a -> IO ()
-free (CA p) = fromPrim $ prim__free p
+  export %inline
+  unsafeUnwrap : CArrayIO n a -> AnyPtr
+  unsafeUnwrap = ptr
 
-export %inline
-getIO : Deref a => SizeOf a => CArray n a -> Fin n -> IO a
-getIO (CA p) x = deref (prim__inc_ptr p $ cast $ cast x * sizeof a)
+  export %inline
+  unsafeWrap : AnyPtr -> CArrayIO n a
+  unsafeWrap = CAIO
 
-export %inline
-setIO : SetPtr a => SizeOf a => CArray n a -> Fin n -> a -> IO ()
-setIO (CA p) x v = setPtr (prim__inc_ptr p $ cast $ cast x * sizeof a) v
+  public export
+  0 CRefIO : Type -> Type
+  CRefIO = CArrayIO 1
 
-public export %inline
-{n : Nat} -> SizeOf a => SizeOf (CArray n a) where
-  sizeof_ = cast n * sizeof a
+  export %inline
+  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> IO (CArrayIO n a)
+  malloc a n = fromPrim $ MkIORes (CAIO $ prim__malloc (cast $ n * sizeof a))
+
+  export %inline
+  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> IO (CArrayIO n a)
+  calloc a n = fromPrim $ MkIORes (CAIO $ prim__calloc (cast n) (cast $ sizeof a))
+
+  export %inline
+  free : CArrayIO n a -> IO ()
+  free (CAIO p) = fromPrim $ prim__free p
+
+  export %inline
+  unboxIO : Deref a => (r : CArrayIO (S n) a) -> IO a
+  unboxIO r = deref r.ptr
+
+  export %inline
+  getIO : Deref a => SizeOf a => CArrayIO n a -> Fin n -> IO a
+  getIO (CAIO p) x = deref (prim__inc_ptr p $ cast $ cast x * sizeof a)
+
+  export %inline
+  setIO : SetPtr a => SizeOf a => CArrayIO n a -> Fin n -> a -> IO ()
+  setIO (CAIO p) x v = setPtr (prim__inc_ptr p $ cast $ cast x * sizeof a) v
+
+  public export %inline
+  {n : Nat} -> SizeOf a => SizeOf (CArrayIO n a) where
+    sizeof_ = cast n * sizeof a
+
+  export
+  withCArray : SizeOf a => (n : Nat) -> (f : CArrayIO n a -> IO b) -> IO b
+  withCArray n f = do
+    arr <- malloc a n
+    res <- f arr
+    free arr
+    pure res
 
 --------------------------------------------------------------------------------
 -- Linear API
 --------------------------------------------------------------------------------
 
+namespace Linear
 
-export %inline
-malloc1 :
-     (0 a : Type)
-  -> {auto so : SizeOf a}
-  -> (n : Nat)
-  -> (1 t : T1 rs)
-  -> A1 rs (CArray n a)
-malloc1 a n t =
-  let MkIORes p _ := prim__malloc (cast $ n * sizeof a) %MkWorld
-   in A (CA p) (unsafeBind t)
-
-export %inline
-free1 : (r : CArray n a) -> (0 p : Res r rs) => C1' rs (Drop rs p)
-free1 r t =
-  let MkIORes _ _ := toPrim (free r) %MkWorld
-   in unsafeRelease p t
-
-parameters {0 a      : Type}
-           {0 n      : Nat}
-           {0 rs     : Resources}
-           {auto so  : SizeOf a}
-           (r        : CArray n a)
-           {auto 0 p : Res r rs}
+  export
+  record CArray (n : Nat) (a : Type) where
+    constructor CA
+    ptr : AnyPtr
 
   export %inline
-  get : Deref a => Fin n -> F1 rs a
-  get x t =
-    let MkIORes v _ := toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) %MkWorld
-     in v # t
+  unsafeUnwrap : CArray n a -> AnyPtr
+  unsafeUnwrap = ptr
 
   export %inline
-  getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => F1 rs a
-  getIx m = get (ixToFin x)
+  unsafeWrap : AnyPtr -> CArray n a
+  unsafeWrap = CA
 
   export %inline
-  getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => F1 rs a
-  getNat m = get (natToFinLT m)
+  malloc :
+       (0 a : Type)
+    -> {auto so : SizeOf a}
+    -> (n : Nat)
+    -> (1 t : T1 rs)
+    -> A1 rs (CArray n a)
+  malloc a n t =
+    let p := prim__malloc (cast $ n * sizeof a)
+     in A (CA p) (unsafeBind t)
 
   export %inline
-  set : SetPtr a => Fin n -> a -> F1' rs
-  set x v t =
-    let MkIORes v _ := toPrim (setPtr (prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) v) %MkWorld
-     in t
+  calloc :
+       (0 a : Type)
+    -> {auto so : SizeOf a}
+    -> (n : Nat)
+    -> (1 t : T1 rs)
+    -> A1 rs (CArray n a)
+  calloc a n t =
+    let p := prim__calloc (cast n) (cast $ sizeof a)
+     in A (CA p) (unsafeBind t)
 
   export %inline
-  setIx : SetPtr a => (0 m : Nat) -> (x : Ix (S m) n) => a -> F1' rs
-  setIx m = set (ixToFin x)
+  free : (r : CArray n a) -> (0 p : Res r rs) => C1' rs (Drop rs p)
+  free r t =
+    let MkIORes _ _ := prim__free r.ptr %MkWorld
+     in unsafeRelease p t
 
   export %inline
-  setNat : SetPtr a => (m : Nat) -> (0 lt : LT m n) => a -> F1' rs
-  setNat m = set (natToFinLT m)
+  unbox : Deref a => (r : CArray (S n) a) -> (0 p : Res r rs) => F1 rs a
+  unbox r t = let MkIORes v _ := toPrim (deref r.ptr) %MkWorld in v # t
+
+  parameters {0 a      : Type}
+             {0 n      : Nat}
+             {0 rs     : Resources}
+             {auto so  : SizeOf a}
+             (r        : CArray n a)
+             {auto 0 p : Res r rs}
+
+    export %inline
+    get : Deref a => Fin n -> F1 rs a
+    get x = ffi $ toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a)
+
+    export %inline
+    getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => F1 rs a
+    getIx m = get (ixToFin x)
+
+    export %inline
+    getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => F1 rs a
+    getNat m = get (natToFinLT m)
+
+    export %inline
+    set : SetPtr a => Fin n -> a -> F1' rs
+    set x v = ffi $ toPrim (setPtr (prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) v)
+
+    export %inline
+    setIx : SetPtr a => (0 m : Nat) -> (x : Ix (S m) n) => a -> F1' rs
+    setIx m = set (ixToFin x)
+
+    export %inline
+    setNat : SetPtr a => (m : Nat) -> (0 lt : LT m n) => a -> F1' rs
+    setNat m = set (natToFinLT m)
+
+  export
+  withCArray : SizeOf a => (n : Nat) -> (f : (r : CArray n a) -> F1 [r] b) -> b
+  withCArray n f =
+    run1 $ \t =>
+      let A r t := malloc a n t
+          v # t := f r t
+          _ # t := Linear.free r t
+       in v # t

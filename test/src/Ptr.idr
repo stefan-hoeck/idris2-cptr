@@ -5,6 +5,8 @@ import Data.Linear.Ref1
 import Data.SOP
 import Hedgehog
 
+import Syntax.T1
+
 %default total
 
 %hide Data.SOP.NP.get
@@ -16,11 +18,9 @@ parameters {0 a : Type}
 
   setGet : (n : Nat) -> Fin n -> a -> a
   setGet n x v =
-    run1 $ \t =>
-      let A r t  := malloc1 a n t
-          t      := set r x v t
-          xs # t := get r x t
-       in xs # free1 r t
+    withCArray n $ \r => T1.do
+      set r x v
+      get r x
 
   roundTrip : Show a => Eq a => Gen a -> Property
   roundTrip as = property $ do

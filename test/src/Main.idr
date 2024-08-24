@@ -1,6 +1,7 @@
 module Main
 
 import Ptr
+import Struct
 import Hedgehog
 
 %default total
@@ -8,4 +9,6 @@ import Hedgehog
 main : IO ()
 main =
   test
-    [ Ptr.props ]
+    [ Ptr.props
+    , Struct.props
+    ]
