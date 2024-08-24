@@ -1,15 +1,23 @@
-#include<stdio.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <time.h>
 
 void *utype(char *name, size_t sz) {
   printf("\npublic export\n");
   printf("0 %s : Type\n", name);
-  printf("%s = Bits%zd\n", name, 8*sz);
+  printf("%s = Bits%zd\n", name, 8 * sz);
 }
 
 void *stype(char *name, size_t sz) {
   printf("\npublic export\n");
   printf("0 %s : Type\n", name);
-  printf("%s = Int%zd\n", name, 8*sz);
+  printf("%s = Int%zd\n", name, 8 * sz);
+}
+
+void *tsize(char *name, size_t sz) {
+  printf("\npublic export %%inline\n");
+  printf("%sSize : Nat\n", name);
+  printf("%sSize = %zd\n", name, sz);
 }
 
 void *main() {
@@ -25,6 +33,11 @@ void *main() {
 
   stype("SsizeT", sizeof(ssize_t));
   utype("SizeT", sizeof(size_t));
+
+  stype("TimeT", sizeof(time_t));
+  stype("SusecondsT", sizeof(suseconds_t));
+  stype("NsecT", sizeof(struct timespec) - sizeof(time_t));
+  tsize("Timespec", sizeof(struct timespec));
 
   return 0;
 }
