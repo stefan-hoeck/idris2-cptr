@@ -6,18 +6,16 @@ brief   = "Fun with C-pointers"
 depends = base >= 0.6.0
         , ref1
         , array
+        , cptr-integers
 
 modules = Data.C.Array
         , Data.C.Deref
-        , Data.C.Integer
         , Data.C.Ptr
         , Data.C.SizeOf
         , Data.C.Struct
 
 sourcedir = "src"
 
-prebuild = "bash gencode.sh"
-
-postbuild = "bash cleanup.sh"
+prebuild = "make -C support"
 
 preinstall = "make -C support install"
