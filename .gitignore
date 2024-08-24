@@ -3,4 +3,4 @@ build/
 lib/
 support/cptr.o
 support/cptr-idris
-codegen/integer_gen
+cptr-integers/codegen/integer_gen

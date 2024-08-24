@@ -1,0 +1,14 @@
+package cptr-integers
+version = 0.1.0
+authors = "stefan-hoeck"
+brief   = "C integer types"
+
+depends = base >= 0.6.0
+
+modules = Data.C.Integer
+
+sourcedir = "src"
+
+prebuild = "bash gencode.sh"
+
+postbuild = "bash cleanup.sh"
