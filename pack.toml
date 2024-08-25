@@ -3,8 +3,3 @@ type = "local"
 path = "."
 ipkg = "cptr.ipkg"
 test = "test/test.ipkg"
-
-[custom.all.cptr-integers]
-type = "local"
-path = "cptr-integers"
-ipkg = "cptr-integers.ipkg"
