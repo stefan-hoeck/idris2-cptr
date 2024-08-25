@@ -4,3 +4,4 @@ lib/
 support/cptr.o
 support/cptr-idris
 codegen/integer_gen
+src/Data/C/Integer.idr
