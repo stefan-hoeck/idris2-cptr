@@ -51,6 +51,10 @@ public export
 SizeT = Bits64
 
 public export
+0 ModeT : Type
+ModeT = Int32
+
+public export
 0 TimeT : Type
 TimeT = Int64
 
