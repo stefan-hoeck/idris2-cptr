@@ -13,6 +13,10 @@ endif
 .PHONY: all
 all: integer_gen
 
+.PHONY: version
+version:
+	$(CC) --version
+
 .PHONY: integer_gen
 integer_gen:
 	$(CC) $(LDFLAGS) -o integer_gen integer.c

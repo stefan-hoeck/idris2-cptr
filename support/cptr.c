@@ -1,3 +1,5 @@
+// Copyright 2024 Stefan Höck
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

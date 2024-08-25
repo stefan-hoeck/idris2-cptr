@@ -3,4 +3,5 @@ build/
 lib/
 support/cptr.o
 support/cptr-idris
-cptr-integers/codegen/integer_gen
+codegen/integer_gen
+src/Data/C/Integer.idr
