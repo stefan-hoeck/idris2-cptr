@@ -1,3 +1,5 @@
+// Copyright 2024 Stefan Höck
+
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
