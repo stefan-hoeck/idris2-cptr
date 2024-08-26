@@ -55,6 +55,10 @@ public export
 ModeT = Int32
 
 public export
+0 OffT : Type
+OffT = Int64
+
+public export
 0 TimeT : Type
 TimeT = Int64
 
