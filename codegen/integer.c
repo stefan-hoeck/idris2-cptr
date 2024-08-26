@@ -37,6 +37,7 @@ void *main() {
   utype("SizeT", sizeof(size_t));
 
   stype("ModeT", sizeof(mode_t));
+  stype("OffT", sizeof(off_t));
   stype("TimeT", sizeof(time_t));
   stype("SusecondsT", sizeof(suseconds_t));
   stype("NsecT", sizeof(struct timespec) - sizeof(time_t));
