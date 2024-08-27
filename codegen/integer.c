@@ -33,6 +33,11 @@ void *main() {
   utype("ULong", sizeof(unsigned long));
   utype("ULongLong", sizeof(unsigned long long));
 
+  stype("PidT", sizeof(pid_t));
+  stype("UidT", sizeof(uid_t));
+  stype("GidT", sizeof(gid_t));
+  stype("IdT", sizeof(id_t));
+
   stype("SsizeT", sizeof(ssize_t));
   utype("SizeT", sizeof(size_t));
 

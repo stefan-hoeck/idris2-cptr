@@ -43,6 +43,22 @@ public export
 ULongLong = Bits64
 
 public export
+0 PidT : Type
+PidT = Int32
+
+public export
+0 UidT : Type
+UidT = Int32
+
+public export
+0 GidT : Type
+GidT = Int32
+
+public export
+0 IdT : Type
+IdT = Int32
+
+public export
 0 SsizeT : Type
 SsizeT = Int64
 
