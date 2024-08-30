@@ -3,6 +3,7 @@ module Data.C.Struct
 import public Data.List.Quantifiers
 import public System.FFI
 import Data.Linear.Ref1
+import Data.C.Array
 import Data.C.Deref
 import Data.C.SizeOf
 import Data.C.Integer
@@ -10,6 +11,11 @@ import Data.C.Integer
 %default total
 
 namespace IO
+
+  ||| Releases the memory allocated for a `Struct`.
+  export %inline
+  freeStruct : Struct s fs -> IO ()
+  freeStruct s = fromPrim (prim__free $ believe_me s)
 
   parameters {s : String}
              (r  : Struct s fs)
@@ -40,3 +46,26 @@ namespace Linear
     export %inline
     setField1 : (0 p : Res r rs) => (val : t) -> F1' rs
     setField1 val = ffi $ toPrim $ setField {sn = s} r nm @{prf} val
+
+namespace Immutable
+
+  ||| A wrapper around immutable structures.
+  export
+  record IStruct (s : String) (fs : List (String,Type)) where
+    constructor IS
+    struct : Struct s fs
+
+  ||| Releases the memory allocated for a `Struct`.
+  export %inline
+  freeStruct : IStruct s fs -> IO ()
+  freeStruct (IS s) = IO.freeStruct s
+
+  parameters {s : String}
+             (r  : IStruct s fs)
+             (nm : String)
+             {auto prf : FieldType nm t fs}
+
+    ||| Retrieve the value of the specified field in the given `IStruct`.
+    export %inline
+    getField : (0 p : Res r rs) => t
+    getField = getField {sn = s} r.struct nm @{prf}
