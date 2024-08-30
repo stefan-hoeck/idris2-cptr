@@ -46,26 +46,3 @@ namespace Linear
     export %inline
     setField1 : (0 p : Res r rs) => (val : t) -> F1' rs
     setField1 val = ffi $ toPrim $ setField {sn = s} r nm @{prf} val
-
-namespace Immutable
-
-  ||| A wrapper around immutable structures.
-  export
-  record IStruct (s : String) (fs : List (String,Type)) where
-    constructor IS
-    struct : Struct s fs
-
-  ||| Releases the memory allocated for a `Struct`.
-  export %inline
-  freeStruct : IStruct s fs -> IO ()
-  freeStruct (IS s) = IO.freeStruct s
-
-  parameters {s : String}
-             (r  : IStruct s fs)
-             (nm : String)
-             {auto prf : FieldType nm t fs}
-
-    ||| Retrieve the value of the specified field in the given `IStruct`.
-    export %inline
-    getField : t
-    getField = getField {sn = s} r.struct nm @{prf}
