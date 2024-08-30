@@ -67,5 +67,5 @@ namespace Immutable
 
     ||| Retrieve the value of the specified field in the given `IStruct`.
     export %inline
-    getField : (0 p : Res r rs) => t
+    getField : t
     getField = getField {sn = s} r.struct nm @{prf}
