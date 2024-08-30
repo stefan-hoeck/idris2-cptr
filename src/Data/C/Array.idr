@@ -22,7 +22,7 @@ prim__malloc : (size : SizeT) -> AnyPtr
 %foreign "C:cptr_calloc, cptr-idris"
 prim__calloc : (n, size : SizeT) -> AnyPtr
 
-%foreign "C:cptr_free, cptr-idris"
+export %foreign "C:cptr_free, cptr-idris"
 prim__free : AnyPtr -> PrimIO ()
 
 %foreign "C:cptr_inc_ptr, cptr-idris"
@@ -34,6 +34,19 @@ prim__inc_ptr : AnyPtr -> SizeT -> AnyPtr
 
 namespace IO
 
+  ||| A wrapped pointer to a C-array holding `n` values of (C-primitive)
+  ||| type `a`.
+  |||
+  ||| Reading from and writing to such an array is O(1) and runs in `IO`.
+  |||
+  ||| See `CArray` for a pure version of mutable C arrays using linear types.
+  ||| See `IArray` for an immutable wrapper to be used in pure code.
+  |||
+  ||| Note : In typical use cases, the memory allocated for a C array must
+  |||        be manually released with a call to `IO.free` unless it is part
+  |||        of a larger structure `Struct` or managed by an external library.
+  |||        If possible, it is advisable to use utility `withCArray` to
+  |||        automatically allocate and free an array of the desired size.
   export
   record CArrayIO (n : Nat) (a : Type) where
     constructor CAIO
@@ -59,6 +72,16 @@ namespace IO
   calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> IO (CArrayIO n a)
   calloc a n = fromPrim $ MkIORes (CAIO $ prim__calloc (cast n) (cast $ sizeof a))
 
+  ||| Frees the memory allocated for a C-array.
+  |||
+  ||| Note: Only call this if the C array is no longer used and has been
+  |||       allocated via a call to `malloc` or `alloc` (either in C land
+  |||       or in Idris). Afterwards, it is no longer safe to use the array
+  |||       for reading or writing, nor is it safe to call `free` on it again.
+  |||
+  |||       For safe resource management, use the linear version of
+  |||       C arrays if possible. Otherwise, consider using a safer monad
+  |||       than `IO` if possible.
   export %inline
   free : CArrayIO n a -> IO ()
   free (CAIO p) = fromPrim $ prim__free p
@@ -79,6 +102,7 @@ namespace IO
   {n : Nat} -> SizeOf a => SizeOf (CArrayIO n a) where
     sizeof_ = cast n * sizeof a
 
+  ||| Safely allocates, uses, and frees a new C-array.
   export
   withCArray : SizeOf a => (n : Nat) -> (f : CArrayIO n a -> IO b) -> IO b
   withCArray n f = do
@@ -93,6 +117,14 @@ namespace IO
 
 namespace Linear
 
+  ||| A wrapped pointer to a C-array holding `n` values of (C-primitive)
+  ||| type `a`.
+  |||
+  ||| Reading from and writing to such an array is O(1) and must run in a
+  ||| pure (but linear) context.
+  |||
+  ||| See `CArrayIO` for a version of mutable C arrays running in `IO`.
+  ||| See `IArray` for an immutable wrapper to be used in pure code.
   export
   record CArray (n : Nat) (a : Type) where
     constructor CA
@@ -177,3 +209,49 @@ namespace Linear
           v # t := f r t
           _ # t := Linear.free r t
        in v # t
+
+namespace Immutable
+
+  ||| A wrapped pointer to a C-array holding `n` values of (C-primitive)
+  ||| type `a`.
+  |||
+  ||| Reading from such an array is O(1) and can be done in pure functions.
+  |||
+  ||| See `CArrayIO` for a version of mutable C arrays running in `IO`.
+  ||| See `CArray` for an mutable wrapper to be used in pure (linear) code.
+  |||
+  ||| Note : In typical use cases, the memory allocated for a C array must
+  |||        be manually released with a call to `IO.free` unless it is part
+  |||        of a larger structure or managed by an external library.
+  export
+  record IArray (n : Nat) (a : Type) where
+    constructor IA
+    ptr : AnyPtr
+
+  export %inline
+  unsafeWrap : AnyPtr -> IArray n a
+  unsafeWrap = IA
+
+  parameters {0 a      : Type}
+             {0 n      : Nat}
+             {auto so  : SizeOf a}
+             (r        : IArray n a)
+
+    export %inline
+    get : Deref a => Fin n -> a
+    get x =
+      let MkIORes v _ := toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) %MkWorld
+       in v
+
+    export %inline
+    getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => a
+    getIx m = get (ixToFin x)
+
+    export %inline
+    getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => a
+    getNat m = get (natToFinLT m)
+
+    ||| Frees the memory allocated for the given C-array.
+    export %inline
+    free : IArray n a -> IO ()
+    free (IA p) = fromPrim $ prim__free p
