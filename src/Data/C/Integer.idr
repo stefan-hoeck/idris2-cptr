@@ -89,3 +89,31 @@ NsecT = Int64
 public export %inline
 TimespecSize : Nat
 TimespecSize = 16
+
+public export
+0 FsBlkCntT : Type
+FsBlkCntT = Int64
+
+public export
+0 FsFilCntT : Type
+FsFilCntT = Int64
+
+public export
+0 DevT : Type
+DevT = Int64
+
+public export
+0 InoT : Type
+InoT = Int64
+
+public export
+0 NlinkT : Type
+NlinkT = Int64
+
+public export
+0 BlkSizeT : Type
+BlkSizeT = Int64
+
+public export
+0 BlkCntT : Type
+BlkCntT = Int64
