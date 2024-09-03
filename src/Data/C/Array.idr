@@ -32,6 +32,16 @@ prim__inc_ptr : AnyPtr -> SizeT -> AnyPtr
 -- IO-API
 --------------------------------------------------------------------------------
 
+||| Allocates a pointer of the given size and uses it for running
+||| the given computation. The pointer is freed afterwards.
+export %inline
+withPtr : HasIO io => SizeT -> (AnyPtr -> io a) -> io a
+withPtr sz f = Prelude.do
+  ptr <- pure $ prim__malloc sz
+  res <- f ptr
+  primIO $ prim__free ptr
+  pure res
+
 namespace IO
 
   ||| A wrapped pointer to a C-array holding `n` values of (C-primitive)
