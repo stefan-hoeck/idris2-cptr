@@ -16,16 +16,16 @@ import Syntax.T1
 -- FFI
 --------------------------------------------------------------------------------
 
-%foreign "C:cptr_malloc, cptr-idris"
+export %foreign "C:cptr_malloc, cptr-idris"
 prim__malloc : (size : SizeT) -> AnyPtr
 
-%foreign "C:cptr_calloc, cptr-idris"
+export %foreign "C:cptr_calloc, cptr-idris"
 prim__calloc : (n, size : SizeT) -> AnyPtr
 
 export %foreign "C:cptr_free, cptr-idris"
 prim__free : AnyPtr -> PrimIO ()
 
-%foreign "C:cptr_inc_ptr, cptr-idris"
+export %foreign "C:cptr_inc_ptr, cptr-idris"
 prim__inc_ptr : AnyPtr -> SizeT -> AnyPtr
 
 --------------------------------------------------------------------------------
