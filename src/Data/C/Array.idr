@@ -75,12 +75,12 @@ namespace IO
   CRefIO = CArrayIO 1
 
   export %inline
-  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> IO (CArrayIO n a)
-  malloc a n = fromPrim $ MkIORes (CAIO $ prim__malloc (cast $ n * sizeof a))
+  malloc : HasIO io => (0 a : Type) -> SizeOf a => (n : Nat) -> io (CArrayIO n a)
+  malloc a n = primIO $ MkIORes (CAIO $ prim__malloc (cast $ n * sizeof a))
 
   export %inline
-  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> IO (CArrayIO n a)
-  calloc a n = fromPrim $ MkIORes (CAIO $ prim__calloc (cast n) (cast $ sizeof a))
+  calloc : HasIO io => (0 a : Type) -> SizeOf a => (n : Nat) -> io (CArrayIO n a)
+  calloc a n = primIO $ MkIORes (CAIO $ prim__calloc (cast n) (cast $ sizeof a))
 
   ||| Frees the memory allocated for a C-array.
   |||
@@ -93,20 +93,21 @@ namespace IO
   |||       C arrays if possible. Otherwise, consider using a safer monad
   |||       than `IO` if possible.
   export %inline
-  free : CArrayIO n a -> IO ()
-  free (CAIO p) = fromPrim $ prim__free p
+  free : HasIO io => CArrayIO n a -> io ()
+  free (CAIO p) = primIO $ prim__free p
 
   export %inline
-  unboxIO : Deref a => (r : CArrayIO (S n) a) -> IO a
-  unboxIO r = deref r.ptr
+  unboxIO : HasIO io => Deref a => (r : CArrayIO (S n) a) -> io a
+  unboxIO r = liftIO $ deref r.ptr
 
   export %inline
-  getIO : Deref a => SizeOf a => CArrayIO n a -> Fin n -> IO a
-  getIO (CAIO p) x = deref (prim__inc_ptr p $ cast $ cast x * sizeof a)
+  getIO : HasIO io => Deref a => SizeOf a => CArrayIO n a -> Fin n -> io a
+  getIO (CAIO p) x = liftIO $ deref (prim__inc_ptr p $ cast $ cast x * sizeof a)
 
   export %inline
-  setIO : SetPtr a => SizeOf a => CArrayIO n a -> Fin n -> a -> IO ()
-  setIO (CAIO p) x v = setPtr (prim__inc_ptr p $ cast $ cast x * sizeof a) v
+  setIO : HasIO io => SetPtr a => SizeOf a => CArrayIO n a -> Fin n -> a -> io ()
+  setIO (CAIO p) x v =
+    liftIO $ setPtr (prim__inc_ptr p $ cast $ cast x * sizeof a) v
 
   public export %inline
   {n : Nat} -> SizeOf a => SizeOf (CArrayIO n a) where
