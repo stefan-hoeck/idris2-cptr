@@ -79,6 +79,10 @@ public export
 TimeT = Int64
 
 public export
+0 ClockT : Type
+ClockT = Int64
+
+public export
 0 SusecondsT : Type
 SusecondsT = Int64
 
