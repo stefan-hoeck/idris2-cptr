@@ -44,6 +44,7 @@ void *main() {
   stype("ModeT", sizeof(mode_t));
   stype("OffT", sizeof(off_t));
   stype("TimeT", sizeof(time_t));
+  stype("ClockT", sizeof(clock_t));
   stype("SusecondsT", sizeof(suseconds_t));
   stype("NsecT", sizeof(struct timespec) - sizeof(time_t));
   tsize("Timespec", sizeof(struct timespec));
