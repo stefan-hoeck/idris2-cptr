@@ -123,67 +123,52 @@ setterFFI s f =
   \{csetterName s f}: AnyPtr -> \{f.itype} -> PrimIO ()
   """
 
-export
-allocFFI : Struct -> String
-allocFFI s =
+getter : Struct -> StructField -> String
+getter s f =
   """
 
-  export %foreign "C:\{callocName s}, \{s.clib}"
-  \{callocName s}: PrimIO AnyPtr
+  export %inline
+  \{f.iname} : HasIO io => \{s.iname} -> io \{f.itype}
+  \{f.iname} s = primIO $ \{getterFFI s f} s.ptr
   """
 
-var : Nat -> String
-var n = "x\{show n}"
+setter : Struct -> StructField -> String
+setter s f =
+  """
 
-maxLength : (a -> String) -> List a -> Nat
-maxLength f = foldl (\n => max n . length . f) 0
+  export %inline
+  set\{f.iname} : HasIO io => \{s.iname} -> \{f.itype} -> io ()
+  set\{f.iname} s v = primIO $ \{setterFFI s f} s.ptr v
+  """
 
 export
 idrisRecord : Struct -> String
 idrisRecord s =
-  let fsx := zipWithIndex s.fields
-   in """
-      public export
-      record \{s.iname} where
-        constructor \{s.constr}
-      \{recFields}
-      %runElab derive "\{s.iname}" [Show,Eq]
+  """
+  export
+  record \{s.iname} where
+    constructor \{s.constr}
+    ptr : AnyPtr
 
-      export
-      to\{s.iname} : AnyPtr -> IO \{s.iname}
-      to\{s.iname} p = do
-      \{doStr fsx}  pure (\{conStr fsx})
-      """
+  export %inline
+  Struct \{s.iname} where
+    wrap   = \{s.constr}
+    unwrap = ptr
+  \{getters}
+  \{setters}
+  """
 
   where
-    doField : Nat -> (Nat,StructField) -> String
-    doField k (n,f) =
-      "  \{padRight k ' ' $ var n} <- fromPrim $ \{cgetterName s f} p"
+    getters : String
+    getters = unlines $ map (getter s) s.fields
 
-    doStr : List (Nat,StructField) -> String
-    doStr ps =
-      let ml := maxLength (var . fst) ps
-       in unlines $ map (doField ml) ps
-
-    conStr : List (Nat,StructField) -> String
-    conStr ns =
-      let ss := map (\p => " \{var $ fst p}") ns
-       in "\{s.constr}\{concat ss}"
-
-    recField : Nat -> StructField -> String
-    recField n sf = "  \{padRight n ' ' sf.iname} : \{sf.itype}"
-
-    recFields : String
-    recFields =
-      let ml := maxLength iname s.fields
-       in unlines $ map (recField ml) s.fields
-
+    setters : String
+    setters = unlines $ map (setter s) s.fields
 
 export
 idrisFFI : Struct -> String
 idrisFFI s =
   unlines $
-    allocFFI s ::
     map (getterFFI s) s.fields ++
     map (setterFFI s) s.fields
 
