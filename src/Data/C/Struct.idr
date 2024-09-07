@@ -1,8 +1,5 @@
 module Data.C.Struct
 
-import public Data.List.Quantifiers
-import public System.FFI
-import Data.Linear.Ref1
 import Data.C.Array
 import Data.C.Deref
 import Data.C.SizeOf
@@ -10,39 +7,30 @@ import Data.C.Integer
 
 %default total
 
-namespace IO
+||| Interface for wrappers around `struct` pointers.
+|||
+||| Functions `wrap` and `unwrap` are used to convert from and
+||| to the underlying pointer.
+public export
+interface Struct a where
+  wrap   : AnyPtr -> a
+  unwrap : a -> AnyPtr
 
-  ||| Releases the memory allocated for a `Struct`.
-  export %inline
-  freeStruct : Struct s fs -> IO ()
-  freeStruct s = fromPrim (prim__free $ believe_me s)
+export %inline
+Struct a => Deref a where
+  deref = pure . wrap
 
-  parameters {s : String}
-             (r  : Struct s fs)
-             (nm : String)
-             {auto prf : FieldType nm t fs}
+||| Frees the memory allocated for a `struct`
+export %inline
+freeStruct : Struct a => HasIO io => a -> io ()
+freeStruct v = primIO $ prim__free (unwrap v)
 
-    ||| Retrieve the value of the specified field in the given `Struct`.
-    export %inline
-    getFieldIO : IO t
-    getFieldIO = pure $ getField {sn = s} r nm @{prf}
+||| Allocates memory for a single `struct`
+export %inline
+allocStruct : (0 a : Type) -> SizeOf a => Struct a => HasIO io => io a
+allocStruct a = primIO $ MkIORes (wrap $ prim__malloc (cast $ sizeof a))
 
-    ||| Set the value of the specified field in the given `Struct`.
-    export %inline
-    setFieldIO : (val : t) -> IO ()
-    setFieldIO val = setField {sn = s} r nm @{prf} val
-
-namespace Linear
-  parameters {s : String}
-             (r  : Struct s fs)
-             (nm : String)
-             {auto prf : FieldType nm t fs}
-
-    ||| Retrieve the value of the specified field in the given `Struct`.
-    export %inline
-    getField1 : (0 p : Res r rs) => F1 rs t
-    getField1 t = getField {sn = s} r nm @{prf} # t
-
-    export %inline
-    setField1 : (0 p : Res r rs) => (val : t) -> F1' rs
-    setField1 val = ffi $ toPrim $ setField {sn = s} r nm @{prf} val
+||| Allocates memory for a single `struct` with all bits set to 0.
+export %inline
+callocStruct : (0 a : Type) -> SizeOf a => Struct a => HasIO io => io a
+callocStruct a = primIO $ MkIORes (wrap $ prim__calloc 1 (cast $ sizeof a))
