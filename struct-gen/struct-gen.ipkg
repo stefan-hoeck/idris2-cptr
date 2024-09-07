@@ -1,0 +1,16 @@
+package struct-gen
+version = 0.1.0
+authors = "stefan-hoeck"
+brief   = "Utilities for generating C struct bindings"
+
+depends = base >= 0.7.0
+        , elab-util
+        , ref1
+
+modules = Struct
+
+sourcedir = "src"
+
+main    = Struct
+
+executable = "struct-gen"

@@ -3,3 +3,8 @@ type = "local"
 path = "."
 ipkg = "cptr.ipkg"
 test = "test/test.ipkg"
+
+[custom.all.struct-gen]
+type = "local"
+path = "struct-gen"
+ipkg = "struct-gen.ipkg"
