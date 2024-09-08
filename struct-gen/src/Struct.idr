@@ -61,12 +61,12 @@ callocName : Struct -> String
 callocName s = "calloc_\{s.cname}"
 
 export
-calloc : Struct -> String
-calloc s =
+sizeof : Struct -> String
+sizeof s =
   """
-  struct \{s.cname} * \{callocName s}() {
-    return (struct \{s.cname} *) calloc(1, sizeof(struct \{s.cname}));
-  }
+    printf("\\npublic export\\n");
+    printf("\{s.cname}_size : Nat\\n");
+    printf("\{s.cname}_size = %zd\\n", sizeof(struct \{s.cname}));
   """
 
 export
@@ -94,12 +94,12 @@ csetter s f =
   """
 
 export
-ccode : Struct -> String
-ccode s =
+ccode : Bool -> Struct -> String
+ccode b s =
   unlines $
-    calloc s ::
+    sizeof s ::
     map (cgetter s) s.fields ++
-    map (csetter s) s.fields
+    (guard b >> map (csetter s) s.fields)
 
 --------------------------------------------------------------------------------
 -- Idris Code
@@ -142,8 +142,8 @@ setter s f =
   """
 
 export
-idrisRecord : Struct -> String
-idrisRecord s =
+idrisRecord : Bool -> Struct -> String
+idrisRecord b s =
   """
   export
   record \{s.iname} where
@@ -154,6 +154,10 @@ idrisRecord s =
   Struct \{s.iname} where
     wrap   = \{s.constr}
     unwrap = ptr
+
+  export %inline
+  SizeOf \{s.iname} where
+    sizeof_ = \{s.cname}_size
   \{getters}
   \{setters}
   """
@@ -163,31 +167,31 @@ idrisRecord s =
     getters = unlines $ map (getter s) s.fields
 
     setters : String
-    setters = unlines $ map (setter s) s.fields
+    setters = if b then (unlines $ map (setter s) s.fields) else ""
 
 export
-idrisFFI : Struct -> String
-idrisFFI s =
+idrisFFI : Bool -> Struct -> String
+idrisFFI b s =
   unlines $
     map (getterFFI s) s.fields ++
-    map (setterFFI s) s.fields
+    (guard b >> map (setterFFI s) s.fields)
 
 export
-idrisCode : Struct -> String
-idrisCode s = unlines [idrisFFI s, idrisRecord s]
+idrisCode : Bool -> Struct -> String
+idrisCode b s = unlines [idrisFFI b s, idrisRecord b s]
 
-cbindings : List String -> IO ()
-cbindings ss =
+cbindings : (withSetters : Bool) -> List String -> IO ()
+cbindings b ss =
   case parseStruct ss of
     Left str => die str
-    Right s  => putStrLn (ccode s)
+    Right s  => putStrLn (ccode b s)
 
 covering
-idrisBindings : List String -> IO ()
-idrisBindings ss =
+idrisBindings : (withSetters : Bool) -> List String -> IO ()
+idrisBindings b ss =
   case parseStruct ss of
     Left str => die str
-    Right s  => putStrLn (idrisCode s)
+    Right s  => putStrLn (idrisCode b s)
 
 covering
 withLines : String -> (List String -> IO ()) -> IO ()
@@ -199,8 +203,10 @@ covering
 main : IO ()
 main =
   getArgs >>= \case
-    [_, "-c", file] => withLines file cbindings
-    [_, "-i", file] => withLines file idrisBindings
+    [_, "-c", file] => withLines file (cbindings True)
+    [_, "-i", file] => withLines file (idrisBindings True)
+    [_, "-C", file] => withLines file (cbindings False)
+    [_, "-I", file] => withLines file (idrisBindings False)
     _               => die "Invalid args"
 
 --------------------------------------------------------------------------------
