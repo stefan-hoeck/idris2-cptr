@@ -129,7 +129,7 @@ getter s f =
 
   export %inline
   \{f.iname} : HasIO io => \{s.iname} -> io \{f.itype}
-  \{f.iname} s = primIO $ \{getterFFI s f} s.ptr
+  \{f.iname} s = primIO $ \{cgetterName s f} s.ptr
   """
 
 setter : Struct -> StructField -> String
@@ -138,7 +138,7 @@ setter s f =
 
   export %inline
   set\{f.iname} : HasIO io => \{s.iname} -> \{f.itype} -> io ()
-  set\{f.iname} s v = primIO $ \{setterFFI s f} s.ptr v
+  set\{f.iname} s v = primIO $ \{csetterName s f} s.ptr v
   """
 
 export
