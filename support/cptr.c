@@ -40,6 +40,10 @@ int32_t cptr_deref_int32(void *ptr) { return *(int32_t *)ptr; }
 
 int64_t cptr_deref_int64(void *ptr) { return *(int64_t *)ptr; }
 
+char *cptr_deref_str(void **ptr) { return ptr[0]; }
+
+uint8_t cptr_is_null(void **ptr) { return ptr[0] == NULL; }
+
 void *cptr_set_bits8(void *ptr, uint8_t v) { ((uint8_t *)ptr)[0] = v; }
 
 void *cptr_set_bits16(void *ptr, uint16_t v) { ((uint16_t *)ptr)[0] = v; }
@@ -55,6 +59,10 @@ void *cptr_set_int16(void *ptr, int16_t v) { ((int16_t *)ptr)[0] = v; }
 void *cptr_set_int32(void *ptr, int32_t v) { ((int32_t *)ptr)[0] = v; }
 
 void *cptr_set_int64(void *ptr, int64_t v) { ((int64_t *)ptr)[0] = v; }
+
+void *cptr_set_str(void **ptr, char *v) { ptr[0] = v; }
+
+void *cptr_set_null(void **ptr) { cptr_set_str(ptr, NULL); }
 
 struct timespec *cptr_allocTimespec() {
   return cptr_calloc(1, sizeof(struct timespec));

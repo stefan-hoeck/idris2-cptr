@@ -48,3 +48,11 @@ SizeOf Int64 where
 public export %inline
 SizeOf Bits64 where
   sizeof_ = 8
+
+public export %inline
+SizeOf String where
+  sizeof_ = AnyPtrSize
+
+public export %inline
+SizeOf (Maybe String) where
+  sizeof_ = AnyPtrSize

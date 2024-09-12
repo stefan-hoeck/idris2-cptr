@@ -52,6 +52,15 @@ prop_int32 = roundTrip anyInt32
 prop_int64 : Property
 prop_int64 = roundTrip anyInt64
 
+anyStr : Gen String
+anyStr = string (linear 0 30) printableUnicode
+
+prop_str : Property
+prop_str = roundTrip anyStr
+
+prop_strMaybe : Property
+prop_strMaybe = roundTrip (maybe anyStr)
+
 export
 props : Group
 props =
@@ -64,4 +73,6 @@ props =
     , ("prop_int16", prop_int16)
     , ("prop_int32", prop_int32)
     , ("prop_int64", prop_int64)
+    , ("prop_str", prop_str)
+    , ("prop_strMaybe", prop_strMaybe)
     ]

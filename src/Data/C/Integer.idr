@@ -94,6 +94,10 @@ public export %inline
 TimespecSize : Nat
 TimespecSize = 16
 
+public export %inline
+AnyPtrSize : Nat
+AnyPtrSize = 8
+
 public export
 0 FsBlkCntT : Type
 FsBlkCntT = Int64
