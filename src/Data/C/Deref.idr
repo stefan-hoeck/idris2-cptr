@@ -30,6 +30,9 @@ prim__deref_int32 : AnyPtr -> PrimIO Int32
 %foreign "C:cptr_deref_int64, cptr-idris"
 prim__deref_int64 : AnyPtr -> PrimIO Int64
 
+%foreign "C:cptr_deref_str, cptr-idris"
+prim__deref_str : AnyPtr -> PrimIO String
+
 %foreign "C:cptr_set_bits8, cptr-idris"
 prim__set_bits8 : AnyPtr -> Bits8 -> PrimIO ()
 
@@ -53,6 +56,15 @@ prim__set_int32 : AnyPtr -> Int32 -> PrimIO ()
 
 %foreign "C:cptr_set_int64, cptr-idris"
 prim__set_int64 : AnyPtr -> Int64 -> PrimIO ()
+
+%foreign "C:cptr_set_str, cptr-idris"
+prim__set_str : AnyPtr -> String -> PrimIO ()
+
+%foreign "C:cptr_set_null, cptr-idris"
+prim__set_null : AnyPtr -> PrimIO ()
+
+%foreign "C:cptr_is_null, cptr-idris"
+prim__is_null : AnyPtr -> Bits8
 
 --------------------------------------------------------------------------------
 -- Interfaces
@@ -86,6 +98,15 @@ Deref Int32 where deref p = fromPrim $ prim__deref_int32 p
 export %inline
 Deref Int64 where deref p = fromPrim $ prim__deref_int64 p
 
+export %inline
+Deref String where deref p = fromPrim $ prim__deref_str p
+
+export %inline
+Deref (Maybe String) where
+  deref p =
+    case prim__is_null p of
+      0 => Just <$> deref p
+      _ => pure Nothing
 
 public export
 interface SetPtr a where
@@ -114,3 +135,11 @@ SetPtr Int32 where setPtr p x = fromPrim $ prim__set_int32 p x
 
 export %inline
 SetPtr Int64 where setPtr p x = fromPrim $ prim__set_int64 p x
+
+export %inline
+SetPtr String where setPtr p x = fromPrim $ prim__set_str p x
+
+export %inline
+SetPtr (Maybe String) where
+  setPtr p Nothing  = fromPrim $ prim__set_null p
+  setPtr p (Just s) = setPtr p s

@@ -48,6 +48,7 @@ void *main() {
   stype("SusecondsT", sizeof(suseconds_t));
   stype("NsecT", sizeof(struct timespec) - sizeof(time_t));
   tsize("Timespec", sizeof(struct timespec));
+  tsize("AnyPtr", sizeof(void *));
 
   stype("FsBlkCntT", sizeof(fsblkcnt_t));
   stype("FsFilCntT", sizeof(fsfilcnt_t));
