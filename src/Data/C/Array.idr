@@ -63,6 +63,10 @@ namespace IO
     constructor CAIO
     ptr : AnyPtr
 
+  public export
+  0 Box : Type -> Type
+  Box = CArrayIO 1
+
   export %inline
   unsafeUnwrap : CArrayIO n a -> AnyPtr
   unsafeUnwrap = ptr
