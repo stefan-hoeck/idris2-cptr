@@ -169,32 +169,32 @@ namespace IO
      in rewrite sym (plusSuccRightSucc m x) in prim__readVect (v::vs) x arr w
 
   parameters {auto has : HasIO io}
+             {auto sz  : SizeOf a}
 
     export %inline
-    writeVectIO :
-         {auto sz  : SizeOf a}
-      -> {auto sp  : SetPtr a}
-      -> Vect n a
-      -> CArrayIO n a
-      -> io ()
+    writeVectIO : SetPtr a => Vect n a -> CArrayIO n a -> io ()
     writeVectIO as arr = primIO $ prim__writeVect as arr
 
     export %inline
-    writeListIO :
-         {auto sz  : SizeOf a}
-      -> {auto sp  : SetPtr a}
-      -> (as : List a)
-      -> CArrayIO (length as) a
-      -> io ()
+    fromVectIO : {n : _} -> SetPtr a => Vect n a -> io (CArrayIO n a)
+    fromVectIO vs = do
+      arr <- malloc a n
+      writeVectIO vs arr
+      pure arr
+
+    export %inline
+    writeListIO : SetPtr a => (as : List a) -> CArrayIO (length as) a -> io ()
     writeListIO as = writeVectIO (fromList as)
 
     export %inline
-    readVectIO :
-         {auto sz : SizeOf a}
-      -> {auto de : Deref a}
-      -> {n       : _}
-      -> CArrayIO n a
-      -> io (Vect n a)
+    fromListIO : SetPtr a => (as : List a) -> io (CArrayIO (length as) a)
+    fromListIO as = do
+      arr <- malloc a (length as)
+      writeListIO as arr
+      pure arr
+
+    export %inline
+    readVectIO : Deref a => {n : _} -> CArrayIO n a -> io (Vect n a)
     readVectIO arr = primIO $ prim__readVect [] n arr
 
 --------------------------------------------------------------------------------
