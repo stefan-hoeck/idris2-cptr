@@ -3,10 +3,10 @@ module Data.C.Array
 import Data.C.Deref
 import Data.C.Integer
 import Data.C.SizeOf
-import Data.Linear.Ref1
 import Data.Vect
 
 import public Data.Fin
+import public Data.Linear.Token
 import public Data.Array.Index
 
 import Syntax.T1
@@ -220,7 +220,7 @@ parameters {0 a      : Type}
   writeVect : SetPtr a => Vect n a -> F1' rs
   writeVect as = writeVect1 as
 
-||| Writes the values from a vector to a C pointer
+||| Writes the values from a list to a C pointer
 export %inline
 writeList :
      {auto so  : SizeOf a}
