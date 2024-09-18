@@ -237,7 +237,7 @@ readVect :
      {n : _}
   -> {auto sz : SizeOf a}
   -> {auto de : Deref a}
-  -> (r : CArray n a)
+  -> (r : CArray' t n a)
   -> {auto 0 p : Res r rs}
   -> F1 rs (Vect n a)
 readVect r = readVect1 r [] n
