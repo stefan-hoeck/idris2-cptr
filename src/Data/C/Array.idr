@@ -220,6 +220,17 @@ parameters {0 a      : Type}
   writeVect : SetPtr a => Vect n a -> F1' rs
   writeVect as = writeVect1 as
 
+||| Writes the values from a vector to a C pointer
+export %inline
+writeList :
+     {auto so  : SizeOf a}
+  -> {auto sp  : SetPtr a}
+  -> (as       : List a)
+  -> (r        : CArray' t (length as) a)
+  -> {auto 0 p : Res r rs}
+  -> F1' rs
+writeList as r = writeVect r (fromList as)
+
 ||| Reads the values from a C pointer into a vector.
 export %inline
 readVect :
@@ -239,6 +250,18 @@ withCArray n f =
         v # t := f r t
         _ # t := free1 r t
      in v # t
+
+export %inline
+fromListIO :
+     {auto has : HasIO io}
+  -> {auto sz  : SizeOf a}
+  -> {auto sp  : SetPtr a}
+  -> (as : List a)
+  -> io (CArrayIO (length as) a)
+fromListIO as = Prelude.do
+  arr <- malloc a (length as)
+  runIO $ writeList as arr
+  pure arr
 
 -- namespace Immutable
 --
