@@ -230,15 +230,15 @@ readVect :
   -> {auto 0 p : Res r rs}
   -> F1 rs (Vect n a)
 readVect r = readVect1 r [] n
---
---   export
---   withCArray : SizeOf a => (n : Nat) -> (f : (r : CArray n a) -> F1 [r] b) -> b
---   withCArray n f =
---     run1 $ \t =>
---       let A r t := malloc a n t
---           v # t := f r t
---           _ # t := Linear.free r t
---        in v # t
+
+export
+withCArray : SizeOf a => (n : Nat) -> (f : (r : CArray n a) -> F1 [r] b) -> b
+withCArray n f =
+  run1 $ \t =>
+    let A r t := malloc1 a n t
+        v # t := f r t
+        _ # t := free1 r t
+     in v # t
 
 -- namespace Immutable
 --
