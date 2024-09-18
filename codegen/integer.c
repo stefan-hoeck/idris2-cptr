@@ -37,6 +37,7 @@ void *main() {
   stype("UidT", sizeof(uid_t));
   stype("GidT", sizeof(gid_t));
   stype("IdT", sizeof(id_t));
+  utype("KeyT", sizeof(key_t));
 
   stype("SsizeT", sizeof(ssize_t));
   utype("SizeT", sizeof(size_t));
