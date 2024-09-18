@@ -59,6 +59,10 @@ public export
 IdT = Int32
 
 public export
+0 KeyT : Type
+KeyT = Bits32
+
+public export
 0 SsizeT : Type
 SsizeT = Int64
 
