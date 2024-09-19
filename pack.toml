@@ -4,6 +4,11 @@ path = "."
 ipkg = "cptr.ipkg"
 test = "test/test.ipkg"
 
+[custom.all.cptr-profile]
+type = "local"
+path = "profile"
+ipkg = "profile.ipkg"
+
 [custom.all.struct-gen]
 type = "local"
 path = "struct-gen"
