@@ -27,7 +27,7 @@ parameters {0 a : Type}
   fromToList as =
     withCArray (length as) $ \r => T1.do
       writeVect r (fromList as)
-      v <- readVect r
+      v <- withIArray r toVect
       pure (toList v)
 
   roundTrip : Show a => Eq a => Gen a -> Property
