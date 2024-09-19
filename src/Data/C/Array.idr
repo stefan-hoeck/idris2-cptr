@@ -18,16 +18,127 @@ import Syntax.T1
 --------------------------------------------------------------------------------
 
 export %foreign "C:cptr_malloc, cptr-idris"
-prim__malloc : (size : SizeT) -> AnyPtr
+prim__malloc : (size : Bits32) -> AnyPtr
 
 export %foreign "C:cptr_calloc, cptr-idris"
-prim__calloc : (n, size : SizeT) -> AnyPtr
+prim__calloc : (n, size : Bits32) -> AnyPtr
 
 export %foreign "C:cptr_free, cptr-idris"
 prim__free : AnyPtr -> PrimIO ()
 
 export %foreign "C:cptr_inc_ptr, cptr-idris"
-prim__inc_ptr : AnyPtr -> SizeT -> AnyPtr
+prim__inc_ptr : AnyPtr -> Bits32 -> AnyPtr
+
+--------------------------------------------------------------------------------
+-- Immutable API
+--------------------------------------------------------------------------------
+
+||| A wrapped pointer to a C-array holding `n` values of (C-primitive)
+||| type `a`.
+|||
+||| Reading from such an array is O(1) and can be done in pure functions.
+|||
+||| See `CArrayIO` for a version of mutable C arrays running in `IO`.
+||| See `CArray` for an mutable wrapper to be used in pure (linear) code.
+|||
+||| Note : In general, this type is not for prolonged storage in an Idris data
+|||        structure (although this is still possible), because it needs to be
+|||        eventually freed. A typical use case is to make use of this for
+|||        its pure and clean API, but to do so from within `IO` or `F1` by
+|||        using `withIArray`.
+export
+record CIArray (n : Nat) (a : Type) where
+  constructor IA
+  ptr : AnyPtr
+
+parameters {0 a      : Type}
+           {0 n      : Nat}
+           {auto so  : SizeOf a}
+           {auto dr  : Deref a}
+
+  export %inline
+  at : CIArray n a -> Fin n -> a
+  at r x =
+    let MkIORes v _ := toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) %MkWorld
+     in v
+
+  export %inline
+  ix : CIArray n a -> (0 m : Nat) -> (x : Ix (S m) n) => a
+  ix r m = at r (ixToFin x)
+
+  export %inline
+  atNat : CIArray n a -> (m : Nat) -> (0 lt : LT m n) => a
+  atNat r m = at r (natToFinLT m)
+
+  foldrI : (m : Nat) -> (0 _ : LTE m n) => (a -> b -> b) -> b -> CIArray n a -> b
+  foldrI 0     _ x r = x
+  foldrI (S k) f x r = foldrI k f (f (atNat r k) x) r
+
+  foldrKV_ :
+       (m : Nat)
+    -> {auto 0 prf : LTE m n}
+    -> (Fin n -> a -> b -> b)
+    -> b
+    -> CIArray n a
+    -> b
+  foldrKV_ 0     _ x r = x
+  foldrKV_ (S k) f x r =
+    let fin := natToFinLT k @{prf} in foldrKV_ k f (f fin (at r fin) x) r
+
+  foldlI : (m : Nat) -> (x : Ix m n) => (b -> a -> b) -> b -> CIArray n a -> b
+  foldlI 0     _ v r = v
+  foldlI (S k) f v r = foldlI k f (f v (ix r k)) r
+
+  foldlKV_ :
+       (m : Nat)
+    -> {auto x : Ix m n}
+    -> (Fin n -> b -> a -> b)
+    -> b
+    -> CIArray n a
+    -> b
+  foldlKV_ 0     _ v r = v
+  foldlKV_ (S k) f v r =
+    let fin := ixToFin x in foldlKV_ k f (f fin v (at r fin)) r
+
+  ontoVect :
+       (r : CIArray n a)
+    -> Vect m a
+    -> (k : Nat)
+    -> {auto 0 lt : LTE k n}
+    -> Vect (m+k) a
+  ontoVect r vs 0     = rewrite plusCommutative m 0 in vs
+  ontoVect r vs (S x) =
+    let v := atNat r x {lt}
+     in rewrite sym (plusSuccRightSucc m x) in ontoVect r (v::vs) x
+
+parameters {n : Nat}
+           {auto sz : SizeOf a}
+           {auto de : Deref a}
+
+  ||| Reads the values from a C pointer into a vector.
+  export %inline
+  toVect : (r : CIArray n a) -> Vect n a
+  toVect r = ontoVect r [] n
+
+  ||| Right fold over the values of an array plus their indices.
+  export %inline
+  foldrKV : (Fin n -> a -> b -> b) -> b -> CIArray n a -> b
+  foldrKV = foldrKV_ n
+
+  ||| Right fold over the values of an array
+  export %inline
+  foldr : (a -> b -> b) -> b -> CIArray n a -> b
+  foldr = foldrI n
+
+  ||| Left fold over the values of an array plus their indices.
+  export %inline
+  foldlKV : (Fin n -> b -> a -> b) -> b -> CIArray n a -> b
+  foldlKV = foldlKV_ n
+
+  ||| Left fold over the values of an array
+  export %inline
+  foldl : (b -> a -> b) -> b -> CIArray n a -> b
+  foldl = foldlI n
 
 --------------------------------------------------------------------------------
 -- IO-API
@@ -36,7 +147,7 @@ prim__inc_ptr : AnyPtr -> SizeT -> AnyPtr
 ||| Allocates a pointer of the given size and uses it for running
 ||| the given computation. The pointer is freed afterwards.
 export %inline
-withPtr : HasIO io => SizeT -> (AnyPtr -> io a) -> io a
+withPtr : HasIO io => Bits32 -> (AnyPtr -> io a) -> io a
 withPtr sz f = Prelude.do
   ptr <- pure $ prim__malloc sz
   res <- f ptr
@@ -203,22 +314,20 @@ parameters {0 a      : Type}
     let _ # t := setIx m x t
      in writeVect1 xs t
 
-  readVect1 :
-       {auto de : Deref a}
-    -> Vect m a
-    -> (k : Nat)
-    -> {auto 0 lt : LTE k n}
-    -> F1 rs (Vect (m+k) a)
-  readVect1 vs 0 t =
-    rewrite plusCommutative m 0 in vs # t
-  readVect1 vs (S x) t =
-    let v # t := getNat x {lt} t
-     in rewrite sym (plusSuccRightSucc m x) in readVect1 (v::vs) x t
-
   ||| Writes the values from a vector to a C pointer
   export %inline
   writeVect : SetPtr a => Vect n a -> F1' rs
   writeVect as = writeVect1 as
+
+  ||| Temporarily wraps the mutable array in an immutable wrapper and
+  ||| run a computation with that.
+  |||
+  ||| This is safe, because the pure function cannot possibly share the
+  ||| immutable array by storing it in a mutable reference. It is
+  ||| referentially transparent, because we call it from a linear context.
+  export %inline
+  withIArray : (CIArray n a -> b) -> F1 rs b
+  withIArray f t = f (IA r.ptr) # t
 
 ||| Writes the values from a list to a C pointer
 export %inline
@@ -230,17 +339,6 @@ writeList :
   -> {auto 0 p : Res r rs}
   -> F1' rs
 writeList as r = writeVect r (fromList as)
-
-||| Reads the values from a C pointer into a vector.
-export %inline
-readVect :
-     {n : _}
-  -> {auto sz : SizeOf a}
-  -> {auto de : Deref a}
-  -> (r : CArray' t n a)
-  -> {auto 0 p : Res r rs}
-  -> F1 rs (Vect n a)
-readVect r = readVect1 r [] n
 
 export
 withCArray : SizeOf a => (n : Nat) -> (f : (r : CArray n a) -> F1 [r] b) -> b
@@ -262,49 +360,3 @@ fromListIO as = Prelude.do
   arr <- malloc a (length as)
   runIO $ writeList as arr
   pure arr
-
--- namespace Immutable
---
---   ||| A wrapped pointer to a C-array holding `n` values of (C-primitive)
---   ||| type `a`.
---   |||
---   ||| Reading from such an array is O(1) and can be done in pure functions.
---   |||
---   ||| See `CArrayIO` for a version of mutable C arrays running in `IO`.
---   ||| See `CArray` for an mutable wrapper to be used in pure (linear) code.
---   |||
---   ||| Note : In typical use cases, the memory allocated for a C array must
---   |||        be manually released with a call to `IO.free` unless it is part
---   |||        of a larger structure or managed by an external library.
---   export
---   record IArray (n : Nat) (a : Type) where
---     constructor IA
---     ptr : AnyPtr
---
---   export %inline
---   unsafeWrap : AnyPtr -> IArray n a
---   unsafeWrap = IA
---
---   parameters {0 a      : Type}
---              {0 n      : Nat}
---              {auto so  : SizeOf a}
---              (r        : IArray n a)
---
---     export %inline
---     get : Deref a => Fin n -> a
---     get x =
---       let MkIORes v _ := toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) %MkWorld
---        in v
---
---     export %inline
---     getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => a
---     getIx m = get (ixToFin x)
---
---     export %inline
---     getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => a
---     getNat m = get (natToFinLT m)
---
---     ||| Frees the memory allocated for the given C-array.
---     export %inline
---     free : IArray n a -> IO ()
---     free (IA p) = fromPrim $ prim__free p
