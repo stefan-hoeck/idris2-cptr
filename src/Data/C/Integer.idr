@@ -95,11 +95,11 @@ public export
 NsecT = Int64
 
 public export %inline
-TimespecSize : Nat
+TimespecSize : Bits32
 TimespecSize = 16
 
 public export %inline
-AnyPtrSize : Nat
+AnyPtrSize : Bits32
 AnyPtrSize = 8
 
 public export

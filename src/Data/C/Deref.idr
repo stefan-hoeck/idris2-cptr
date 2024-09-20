@@ -7,54 +7,70 @@ module Data.C.Deref
 --------------------------------------------------------------------------------
 
 %foreign "C:cptr_deref_bits8, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'unsigned-8 x 0))"
 prim__deref_bits8 : AnyPtr -> PrimIO Bits8
 
 %foreign "C:cptr_deref_bits16, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'unsigned-16 x 0))"
 prim__deref_bits16 : AnyPtr -> PrimIO Bits16
 
 %foreign "C:cptr_deref_bits32, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'unsigned-32 x 0))"
 prim__deref_bits32 : AnyPtr -> PrimIO Bits32
 
 %foreign "C:cptr_deref_bits64, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'unsigned-64 x 0))"
 prim__deref_bits64 : AnyPtr -> PrimIO Bits64
 
 %foreign "C:cptr_deref_int8, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'integer-8 x 0))"
 prim__deref_int8 : AnyPtr -> PrimIO Int8
 
 %foreign "C:cptr_deref_int16, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'integer-16 x 0))"
 prim__deref_int16 : AnyPtr -> PrimIO Int16
 
 %foreign "C:cptr_deref_int32, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'integer-32 x 0))"
 prim__deref_int32 : AnyPtr -> PrimIO Int32
 
 %foreign "C:cptr_deref_int64, cptr-idris"
+         "scheme,chez:(lambda (x) (foreign-ref 'integer-64 x 0))"
 prim__deref_int64 : AnyPtr -> PrimIO Int64
 
 %foreign "C:cptr_deref_str, cptr-idris"
 prim__deref_str : AnyPtr -> PrimIO String
 
 %foreign "C:cptr_set_bits8, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'unsigned-8 x 0 y))"
 prim__set_bits8 : AnyPtr -> Bits8 -> PrimIO ()
 
 %foreign "C:cptr_set_bits16, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'unsigned-16 x 0 y))"
 prim__set_bits16 : AnyPtr -> Bits16 -> PrimIO ()
 
 %foreign "C:cptr_set_bits32, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'unsigned-32 x 0 y))"
 prim__set_bits32 : AnyPtr -> Bits32 -> PrimIO ()
 
 %foreign "C:cptr_set_bits64, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'unsigned-64 x 0 y))"
 prim__set_bits64 : AnyPtr -> Bits64 -> PrimIO ()
 
 %foreign "C:cptr_set_int8, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'integer-8 x 0 y))"
 prim__set_int8 : AnyPtr -> Int8 -> PrimIO ()
 
 %foreign "C:cptr_set_int16, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'integer-16 x 0 y))"
 prim__set_int16 : AnyPtr -> Int16 -> PrimIO ()
 
 %foreign "C:cptr_set_int32, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'integer-32 x 0 y))"
 prim__set_int32 : AnyPtr -> Int32 -> PrimIO ()
 
 %foreign "C:cptr_set_int64, cptr-idris"
+         "scheme,chez:(lambda (x y) (foreign-set! 'integer-64 x 0 y))"
 prim__set_int64 : AnyPtr -> Int64 -> PrimIO ()
 
 %foreign "C:cptr_set_str, cptr-idris"

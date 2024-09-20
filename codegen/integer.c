@@ -18,7 +18,7 @@ void *stype(char *name, size_t sz) {
 
 void *tsize(char *name, size_t sz) {
   printf("\npublic export %%inline\n");
-  printf("%sSize : Nat\n", name);
+  printf("%sSize : Bits32\n", name);
   printf("%sSize = %zd\n", name, sz);
 }
 

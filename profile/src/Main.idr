@@ -3,6 +3,7 @@ module Main
 import Data.Buffer.Indexed
 import Data.Array
 import Data.C.Ptr
+import Data.C.Array8 as A8
 import Profile
 
 %default total
@@ -15,6 +16,9 @@ sumEmptyBuffer n = foldr (\x,y => cast x + y) 0 (Buffer.Indexed.fill n 1)
 
 sumEmptyCptr : Nat -> Bits32
 sumEmptyCptr n = withCArray {a = Bits32} n $ \r => withIArray r (foldr (+) 0)
+
+sumEmptyArray8 : Nat -> Bits32
+sumEmptyArray8 n = A8.withCArray n $ \r => A8.withIArray r (foldr (\x,y => cast x + y) 0)
 
 bench : Benchmark Void
 bench = Group "ref1"
@@ -32,6 +36,11 @@ bench = Group "ref1"
       [ Single "1"       (basic sumEmptyCptr 1)
       , Single "1000"    (basic sumEmptyCptr 1000)
       , Single "1000000" (basic sumEmptyCptr 1000000)
+      ]
+  , Group "sum CArray8"
+      [ Single "1"       (basic sumEmptyArray8 1)
+      , Single "1000"    (basic sumEmptyArray8 1000)
+      , Single "1000000" (basic sumEmptyArray8 1000000)
       ]
   ]
 

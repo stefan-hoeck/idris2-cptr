@@ -7,10 +7,10 @@ import Data.C.Integer
 ||| Interface for returning the size of a C object in bytes
 public export
 interface SizeOf a where
-  sizeof_ : Nat
+  sizeof_ : Bits32
 
 public export %inline
-sizeof : (0 a : Type) -> SizeOf a => Nat
+sizeof : (0 a : Type) -> SizeOf a => Bits32
 sizeof a = sizeof_ {a}
 
 --------------------------------------------------------------------------------

@@ -18,16 +18,19 @@ import Syntax.T1
 --------------------------------------------------------------------------------
 
 export %foreign "C:cptr_malloc, cptr-idris"
+                "scheme,chez:(lambda (x) (if (= 0 x) 0 (foreign-alloc x)))"
 prim__malloc : (size : Bits32) -> AnyPtr
 
 export %foreign "C:cptr_calloc, cptr-idris"
 prim__calloc : (n, size : Bits32) -> AnyPtr
 
 export %foreign "C:cptr_free, cptr-idris"
+                "scheme,chez:(lambda (x) (if (= 0 x) '() (foreign-free x)))"
 prim__free : AnyPtr -> PrimIO ()
 
 export %foreign "C:cptr_inc_ptr, cptr-idris"
-prim__inc_ptr : AnyPtr -> Bits32 -> AnyPtr
+                "scheme,chez:(lambda (p x y) (+ p (* x y)))"
+prim__inc_ptr : AnyPtr -> Bits32 -> Bits32 -> AnyPtr
 
 --------------------------------------------------------------------------------
 -- Immutable API
@@ -59,7 +62,7 @@ parameters {0 a      : Type}
   export %inline
   at : CIArray n a -> Fin n -> a
   at r x =
-    let MkIORes v _ := toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) %MkWorld
+    let MkIORes v _ := toPrim (deref $ prim__inc_ptr r.ptr (sizeof a) (cast $ finToNat x)) %MkWorld
      in v
 
   export %inline
@@ -208,13 +211,13 @@ parameters {auto has : HasIO io}
   ||| Allocates a new C-pointer of `sizeof a * n` bytes.
   export %inline
   malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> io (CArrayIO n a)
-  malloc a n = primIO $ MkIORes (CA $ prim__malloc (cast $ n * sizeof a))
+  malloc a n = primIO $ MkIORes (CA $ prim__malloc (cast n * sizeof a))
 
   ||| Like `malloc` but resets all allocated bytes to zero.
   export %inline
   calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> io (CArrayIO n a)
   calloc a n =
-    primIO $ MkIORes (CA $ prim__calloc (cast n) (cast $ sizeof a))
+    primIO $ MkIORes (CA $ prim__calloc (cast n) (sizeof a))
 
   ||| Frees the memory allocated for a C-array.
   |||
@@ -243,7 +246,7 @@ malloc1 :
   -> (1 t : T1 rs)
   -> A1 rs (CArray n a)
 malloc1 a n t =
-  let p := prim__malloc (cast $ n * sizeof a)
+  let p := prim__malloc (cast n * sizeof a)
    in A (CA p) (unsafeBind t)
 
 ||| Like `malloc1` but resets all allocated bytes to zero.
@@ -255,7 +258,7 @@ calloc1 :
   -> (1 t : T1 rs)
   -> A1 rs (CArray n a)
 calloc1 a n t =
-  let p := prim__calloc (cast n) (cast $ sizeof a)
+  let p := prim__calloc (cast n) (sizeof a)
    in A (CA p) (unsafeBind t)
 
 ||| Frees the memory allocated for a C pointer and removes it from the
@@ -281,7 +284,7 @@ parameters {0 a      : Type}
   ||| Reads a value from a C-pointer at the given position.
   export %inline
   get : Deref a => Fin n -> F1 rs a
-  get x = ffi $ toPrim (deref $ prim__inc_ptr r.ptr $ cast $ cast x * sizeof a)
+  get x = ffi $ toPrim (deref $ prim__inc_ptr r.ptr (cast $ finToNat x) (sizeof a))
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
@@ -296,7 +299,7 @@ parameters {0 a      : Type}
   ||| Writes a value to a C pointer at the given position.
   export %inline
   set : SetPtr a => Fin n -> a -> F1' rs
-  set x v = ffi $ toPrim (setPtr (prim__inc_ptr r.ptr $ cast $ cast x * sizeof a) v)
+  set x v = ffi $ toPrim (setPtr (prim__inc_ptr r.ptr (cast $ finToNat x) (sizeof a)) v)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
