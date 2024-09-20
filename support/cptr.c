@@ -23,7 +23,11 @@ void *cptr_calloc(size_t n, size_t size) {
 
 void *cptr_free(void *ptr) { free(ptr); }
 
-char *cptr_inc_ptr(char *arr, size_t pos) { return arr + pos; }
+char *cptr_inc_ptr(char *arr, size_t n, size_t pos) { return arr + n * pos; }
+
+uint8_t get_bits8(uint8_t *ptr, uint32_t ix) { return ptr[ix]; }
+
+void set_bits8(uint8_t *ptr, uint32_t ix, uint8_t v) { ptr[ix] = v; }
 
 uint8_t cptr_deref_bits8(void *ptr) { return *(uint8_t *)ptr; }
 
