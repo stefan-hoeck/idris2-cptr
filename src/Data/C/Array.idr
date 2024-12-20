@@ -247,7 +247,7 @@ malloc1 :
   -> A1 rs (CArray n a)
 malloc1 a n t =
   let p := prim__malloc (cast n * sizeof a)
-   in A (CA p) (unsafeBind t)
+   in CA p # unsafeBind t
 
 ||| Like `malloc1` but resets all allocated bytes to zero.
 export %inline
@@ -259,7 +259,7 @@ calloc1 :
   -> A1 rs (CArray n a)
 calloc1 a n t =
   let p := prim__calloc (cast n) (sizeof a)
-   in A (CA p) (unsafeBind t)
+   in CA p # unsafeBind t
 
 ||| Frees the memory allocated for a C pointer and removes it from the
 ||| resources bound to the linear token.
@@ -347,7 +347,7 @@ export
 withCArray : SizeOf a => (n : Nat) -> (f : (r : CArray n a) -> F1 [r] b) -> b
 withCArray n f =
   run1 $ \t =>
-    let A r t := malloc1 a n t
+    let r # t := malloc1 a n t
         v # t := f r t
         _ # t := free1 r t
      in v # t
