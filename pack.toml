@@ -17,13 +17,13 @@ ipkg = "struct-gen.ipkg"
 [custom.all.array]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-array"
-commit = "latest:dependent"
+commit = "latest:main"
 ipkg   = "array.ipkg"
 
 [custom.all.ref1]
 type   = "git"
 url    = "https://github.com/stefan-hoeck/idris2-ref1"
-commit = "latest:dependent"
+commit = "latest:main"
 ipkg   = "ref1.ipkg"
 
 [custom.all.profiler]
