@@ -3,8 +3,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <string.h>
+#include <time.h>
 
 void *cptr_malloc(size_t bytes) {
   if (bytes == 0) {
