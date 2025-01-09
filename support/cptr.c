@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
 
 void *cptr_malloc(size_t bytes) {
   if (bytes == 0) {
@@ -20,6 +21,8 @@ void *cptr_calloc(size_t n, size_t size) {
     return calloc(n, size);
   }
 }
+
+void *cptr_copy(void *src, void *dest, size_t len) { memcpy(dest, src, len); }
 
 void *cptr_free(void *ptr) { free(ptr); }
 
