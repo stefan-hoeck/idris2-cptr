@@ -25,11 +25,14 @@ prim__malloc : (size : Bits32) -> AnyPtr
 export %foreign "C:cptr_calloc, cptr-idris"
 prim__calloc : (n, size : Bits32) -> AnyPtr
 
-export %foreign "C:cptr_copy, cptr-idris"
-prim__copy : AnyPtr -> AnyPtr -> Bits32 -> PrimIO ()
+export %foreign "C_collect_safe:cptr_copy, cptr-idris"
+prim__copy_pp : AnyPtr -> AnyPtr -> Bits32 -> PrimIO ()
 
 export %foreign "C:cptr_copy, cptr-idris"
-prim__copy_buf : AnyPtr -> Buffer -> Bits32 -> PrimIO ()
+prim__copy_pb : AnyPtr -> Buffer -> Bits32 -> PrimIO ()
+
+export %foreign "C:cptr_copy, cptr-idris"
+prim__copy_bp : Buffer -> AnyPtr -> Bits32 -> PrimIO ()
 
 export %foreign "C:cptr_free, cptr-idris"
                 "scheme,chez:(lambda (x) (if (= 0 x) '() (foreign-free x)))"
