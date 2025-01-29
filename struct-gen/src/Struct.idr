@@ -57,10 +57,6 @@ parseStruct _ = Left "invalid struct file"
 --------------------------------------------------------------------------------
 
 export
-callocName : Struct -> String
-callocName s = "calloc_\{s.cname}"
-
-export
 sizeof : Struct -> String
 sizeof s =
   """
@@ -128,8 +124,8 @@ getter s f =
   """
 
   export %inline
-  \{f.iname} : HasIO io => \{s.iname} -> io \{f.itype}
-  \{f.iname} s = primIO $ \{cgetterName s f} s.ptr
+  \{f.iname} : (r : \{s.iname} tg) -> (0 p : Res r rs) => F1 rs \{f.itype}
+  \{f.iname} s = ffi $ \{cgetterName s f} s.ptr
   """
 
 setter : Struct -> StructField -> String
@@ -137,8 +133,8 @@ setter s f =
   """
 
   export %inline
-  set\{f.iname} : HasIO io => \{s.iname} -> \{f.itype} -> io ()
-  set\{f.iname} s v = primIO $ \{csetterName s f} s.ptr v
+  set\{f.iname} : (r : \{s.iname} tg) -> (0 p : Res r rs) => \{f.itype} -> F1' rs
+  set\{f.iname} s v = ffi $ \{csetterName s f} s.ptr v
   """
 
 export
@@ -146,18 +142,16 @@ idrisRecord : Bool -> Struct -> String
 idrisRecord b s =
   """
   export
-  record \{s.iname} where
+  record \{s.iname} (tg : RTag) where
     constructor \{s.constr}
     ptr : AnyPtr
 
   export %inline
   Struct \{s.iname} where
-    wrap   = \{s.constr}
-    unwrap = ptr
+    wrap       = \{s.constr}
+    unwrap     = ptr
+    structsize = \{s.cname}_size
 
-  export %inline
-  SizeOf \{s.iname} where
-    sizeof_ = \{s.cname}_size
   \{getters}
   \{setters}
   """
