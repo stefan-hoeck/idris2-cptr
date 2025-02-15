@@ -110,29 +110,21 @@ foldl = foldlI n
 --------------------------------------------------------------------------------
 
 export
-record CArray8' (t : RTag) (n : Nat) where
+record CArray8 (s : Type) (n : Nat) where
   constructor CA
   ptr : AnyPtr
-
-||| Convenience alias for `CArray8' RPure`
-public export
-0 CArray8 : Nat -> Type
-CArray8 = CArray8' RPure
 
 ||| Convenience alias for `CArray8' RIO`
 public export
 0 CArray8IO : Nat -> Type
-CArray8IO = CArray8' RIO
-
-public export
-InIO (CArray8' RIO n) where
+CArray8IO = CArray8 World
 
 export %inline
-unsafeUnwrap : CArray8' t n -> AnyPtr
+unsafeUnwrap : CArray8 s n -> AnyPtr
 unsafeUnwrap = ptr
 
 export %inline
-unsafeWrap : AnyPtr -> CArray8' t n
+unsafeWrap : AnyPtr -> CArray8 s n
 unsafeWrap = CA
 
 parameters {auto has : HasIO io}
@@ -158,62 +150,58 @@ parameters {auto has : HasIO io}
 
 ||| Allocates a new C-pointer of `sizeof a * n` bytes.
 export %inline
-malloc1 : (n : Nat) -> (1 t : T1 rs) -> A1 rs (CArray8 n)
+malloc1 : (n : Nat) -> F1 s (CArray8 s n)
 malloc1 n t =
   let p := prim__malloc (cast n)
-   in CA p # unsafeBind t
+   in CA p # t
 
 ||| Like `malloc1` but resets all allocated bytes to zero.
 export %inline
-calloc1 : (n : Nat) -> (1 t : T1 rs) -> A1 rs (CArray8 n)
+calloc1 : (n : Nat) -> F1 s (CArray8 s n)
 calloc1 n t =
   let p := prim__calloc (cast n) 1
-   in CA p # unsafeBind t
+   in CA p # t
 
 ||| Frees the memory allocated for a C pointer and removes it from the
 ||| resources bound to the linear token.
 export %inline
-free1 : (r : CArray8 n) -> (0 p : Res r rs) => C1' rs (Drop rs p)
-free1 r t =
-  let MkIORes _ _ := prim__free r.ptr %MkWorld
-   in unsafeRelease p t
+free1 : (r : CArray8 s n) -> F1' s
+free1 r = ffi (prim__free r.ptr)
 
 parameters {0 n      : Nat}
-           {0 rs     : Resources}
-           (r        : CArray8' t n)
-           {auto 0 p : Res r rs}
+           (r        : CArray8 s n)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
-  get : Fin n -> F1 rs Bits8
+  get : Fin n -> F1 s Bits8
   get x t = prim__getbits8 r.ptr (cast $ finToNat x) # t
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
-  getIx : (0 m : Nat) -> (x : Ix (S m) n) => F1 rs Bits8
+  getIx : (0 m : Nat) -> (x : Ix (S m) n) => F1 s Bits8
   getIx m = get (ixToFin x)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
-  getNat : (m : Nat) -> (0 lt : LT m n) => F1 rs Bits8
+  getNat : (m : Nat) -> (0 lt : LT m n) => F1 s Bits8
   getNat m = get (natToFinLT m)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
-  set : Fin n -> Bits8 -> F1' rs
+  set : Fin n -> Bits8 -> F1' s
   set x v = ffi $ prim__setbits8 r.ptr (cast $ finToNat x) v
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
-  setIx : (0 m : Nat) -> (x : Ix (S m) n) => Bits8 -> F1' rs
+  setIx : (0 m : Nat) -> (x : Ix (S m) n) => Bits8 -> F1' s
   setIx m = set (ixToFin x)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
-  setNat : (m : Nat) -> (0 lt : LT m n) => Bits8 -> F1' rs
+  setNat : (m : Nat) -> (0 lt : LT m n) => Bits8 -> F1' s
   setNat m = set (natToFinLT m)
 
-  writeVect1 : Vect k Bits8 -> Ix k n => F1' rs
+  writeVect1 : Vect k Bits8 -> Ix k n => F1' s
   writeVect1           []        t = () # t
   writeVect1 {k = S m} (x :: xs) t =
     let _ # t := Array8.setIx m x t
@@ -221,7 +209,7 @@ parameters {0 n      : Nat}
 
   ||| Writes the values from a vector to a C pointer
   export %inline
-  writeVect : Vect n Bits8 -> F1' rs
+  writeVect : Vect n Bits8 -> F1' s
   writeVect as = writeVect1 as
 
   ||| Temporarily wraps the mutable array in an immutable wrapper and
@@ -231,20 +219,16 @@ parameters {0 n      : Nat}
   ||| immutable array by storing it in a mutable reference. It is
   ||| referentially transparent, because we call it from a linear context.
   export %inline
-  withIArray : (CIArray8 n -> b) -> F1 rs b
+  withIArray : (CIArray8 n -> b) -> F1 s b
   withIArray f t = f (IA r.ptr) # t
 
 ||| Writes the values from a list to a C pointer
 export %inline
-writeList :
-     (as       : List Bits8)
-  -> (r        : CArray8' t (length as))
-  -> {auto 0 p : Res r rs}
-  -> F1' rs
+writeList : (as : List Bits8) -> CArray8 s (length as) -> F1' s
 writeList as r = writeVect r (fromList as)
 
 export
-withCArray : (n : Nat) -> (f : (r : CArray8 n) -> F1 [r] b) -> b
+withCArray : (n : Nat) -> (f : forall s . CArray8 s n -> F1 s b) -> b
 withCArray n f =
   run1 $ \t =>
     let r # t := Array8.malloc1 n t

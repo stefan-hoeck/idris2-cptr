@@ -179,33 +179,25 @@ withPtr sz f = Prelude.do
 |||        be manually released with a call to `free` unless it is part
 |||        of a larger structure `Struct` or managed by an external library.
 export
-record CArray' (t : RTag) (n : Nat) (a : Type) where
+record CArray (s : Type) (n : Nat) (a : Type) where
   constructor CA
   ptr : AnyPtr
-
-||| Convenience alias for `CArray' RPure`
-public export
-0 CArray : Nat -> Type -> Type
-CArray = CArray' RPure
 
 ||| Convenience alias for `CArray' RIO`
 public export
 0 CArrayIO : Nat -> Type -> Type
-CArrayIO = CArray' RIO
-
-public export
-InIO (CArray' RIO n a) where
+CArrayIO = CArray World
 
 public export %inline
-{n : Nat} -> SizeOf a => SizeOf (CArray' t n a) where
+{n : Nat} -> SizeOf a => SizeOf (CArray s n a) where
   sizeof_ = cast n * sizeof a
 
 export %inline
-unsafeUnwrap : CArray' t n a -> AnyPtr
+unsafeUnwrap : CArray s n a -> AnyPtr
 unsafeUnwrap = ptr
 
 export %inline
-unsafeWrap : AnyPtr -> CArray' t n a
+unsafeWrap : AnyPtr -> CArray s n a
 unsafeWrap = CA
 
 public export
@@ -213,8 +205,8 @@ public export
 IOBox = CArrayIO 1
 
 public export
-0 Box : Type -> Type
-Box = CArray 1
+0 Box : Type -> Type -> Type
+Box s = CArray s 1
 
 parameters {auto has : HasIO io}
 
@@ -253,11 +245,10 @@ malloc1 :
      (0 a : Type)
   -> {auto so : SizeOf a}
   -> (n : Nat)
-  -> (1 t : T1 rs)
-  -> A1 rs (CArray n a)
+  -> F1 s (CArray s n a)
 malloc1 a n t =
   let p := prim__malloc (cast n * sizeof a)
-   in CA p # unsafeBind t
+   in CA p # t
 
 ||| Like `malloc1` but resets all allocated bytes to zero.
 export %inline
@@ -265,63 +256,58 @@ calloc1 :
      (0 a : Type)
   -> {auto so : SizeOf a}
   -> (n : Nat)
-  -> (1 t : T1 rs)
-  -> A1 rs (CArray n a)
+  -> F1 s (CArray s n a)
 calloc1 a n t =
   let p := prim__calloc (cast n) (sizeof a)
-   in CA p # unsafeBind t
+   in CA p # t
 
 ||| Frees the memory allocated for a C pointer and removes it from the
 ||| resources bound to the linear token.
 export %inline
-free1 : (r : CArray n a) -> (0 p : Res r rs) => C1' rs (Drop rs p)
-free1 r t =
-  let MkIORes _ _ := prim__free r.ptr %MkWorld
-   in unsafeRelease p t
+free1 : (r : CArray s n a) -> F1' s
+free1 r = ffi (prim__free r.ptr)
 
 ||| Extracts the first value stored in a C pointer.
 export %inline
-unbox : Deref a => (r : CArray' t (S n) a) -> (0 p : Res r rs) => F1 rs a
-unbox r t = let MkIORes v _ := toPrim (deref r.ptr) %MkWorld in v # t
+unbox : Deref a => (r : CArray s (S n) a) -> F1 s a
+unbox r = ffi $ toPrim (deref r.ptr)
 
 parameters {0 a      : Type}
            {0 n      : Nat}
-           {0 rs     : Resources}
            {auto so  : SizeOf a}
-           (r        : CArray' t n a)
-           {auto 0 p : Res r rs}
+           (r        : CArray s n a)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
-  get : Deref a => Fin n -> F1 rs a
+  get : Deref a => Fin n -> F1 s a
   get x = ffi $ toPrim (deref $ prim__inc_ptr r.ptr (cast $ finToNat x) (sizeof a))
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
-  getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => F1 rs a
+  getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => F1 s a
   getIx m = get (ixToFin x)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
-  getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => F1 rs a
+  getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => F1 s a
   getNat m = get (natToFinLT m)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
-  set : SetPtr a => Fin n -> a -> F1' rs
+  set : SetPtr a => Fin n -> a -> F1' s
   set x v = ffi $ toPrim (setPtr (prim__inc_ptr r.ptr (cast $ finToNat x) (sizeof a)) v)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
-  setIx : SetPtr a => (0 m : Nat) -> (x : Ix (S m) n) => a -> F1' rs
+  setIx : SetPtr a => (0 m : Nat) -> (x : Ix (S m) n) => a -> F1' s
   setIx m = set (ixToFin x)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
-  setNat : SetPtr a => (m : Nat) -> (0 lt : LT m n) => a -> F1' rs
+  setNat : SetPtr a => (m : Nat) -> (0 lt : LT m n) => a -> F1' s
   setNat m = set (natToFinLT m)
 
-  writeVect1 : SetPtr a => Vect k a -> Ix k n => F1' rs
+  writeVect1 : SetPtr a => Vect k a -> Ix k n => F1' s
   writeVect1           []        t = () # t
   writeVect1 {k = S m} (x :: xs) t =
     let _ # t := setIx m x t
@@ -329,7 +315,7 @@ parameters {0 a      : Type}
 
   ||| Writes the values from a vector to a C pointer
   export %inline
-  writeVect : SetPtr a => Vect n a -> F1' rs
+  writeVect : SetPtr a => Vect n a -> F1' s
   writeVect as = writeVect1 as
 
   ||| Temporarily wraps the mutable array in an immutable wrapper and
@@ -339,7 +325,7 @@ parameters {0 a      : Type}
   ||| immutable array by storing it in a mutable reference. It is
   ||| referentially transparent, because we call it from a linear context.
   export %inline
-  withIArray : (CIArray n a -> b) -> F1 rs b
+  withIArray : (CIArray n a -> b) -> F1 s b
   withIArray f t = f (IA r.ptr) # t
 
 ||| Writes the values from a list to a C pointer
@@ -348,13 +334,12 @@ writeList :
      {auto so  : SizeOf a}
   -> {auto sp  : SetPtr a}
   -> (as       : List a)
-  -> (r        : CArray' t (length as) a)
-  -> {auto 0 p : Res r rs}
-  -> F1' rs
+  -> (r        : CArray s (length as) a)
+  -> F1' s
 writeList as r = writeVect r (fromList as)
 
 export
-withCArray : SizeOf a => (n : Nat) -> (f : (r : CArray n a) -> F1 [r] b) -> b
+withCArray : SizeOf a => (n : Nat) -> (f : forall s . CArray s n a -> F1 s b) -> b
 withCArray n f =
   run1 $ \t =>
     let r # t := malloc1 a n t
