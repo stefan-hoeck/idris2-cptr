@@ -154,7 +154,7 @@ parameters {n : Nat}
   foldl = foldlI n
 
 --------------------------------------------------------------------------------
--- IO-API
+-- Mutable C Arrays
 --------------------------------------------------------------------------------
 
 ||| Allocates a pointer of the given size and uses it for running
@@ -207,33 +207,6 @@ IOBox = CArrayIO 1
 public export
 0 Box : Type -> Type -> Type
 Box s = CArray s 1
-
-parameters {auto has : HasIO io}
-
-  ||| Allocates a new C-pointer of `sizeof a * n` bytes.
-  export %inline
-  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> io (CArrayIO n a)
-  malloc a n = primIO $ MkIORes (CA $ prim__malloc (cast n * sizeof a))
-
-  ||| Like `malloc` but resets all allocated bytes to zero.
-  export %inline
-  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> io (CArrayIO n a)
-  calloc a n =
-    primIO $ MkIORes (CA $ prim__calloc (cast n) (sizeof a))
-
-  ||| Frees the memory allocated for a C-array.
-  |||
-  ||| Note: Only call this if the C array is no longer used and has been
-  |||       allocated via a call to `malloc` or `alloc` (either in C land
-  |||       or in Idris). Afterwards, it is no longer safe to use the array
-  |||       for reading or writing, nor is it safe to call `free` on it again.
-  |||
-  |||       For safe resource management, use the linear version of
-  |||       C arrays if possible. Otherwise, consider using a safer monad
-  |||       than `IO` if possible.
-  export %inline
-  free : CArrayIO n a -> io ()
-  free (CA p) = primIO $ prim__free p
 
 --------------------------------------------------------------------------------
 -- Linear API
@@ -347,14 +320,39 @@ withCArray n f =
         _ # t := free1 r t
      in v # t
 
-export %inline
-fromListIO :
-     {auto has : HasIO io}
-  -> {auto sz  : SizeOf a}
-  -> {auto sp  : SetPtr a}
-  -> (as : List a)
-  -> io (CArrayIO (length as) a)
-fromListIO as = Prelude.do
-  arr <- malloc a (length as)
-  runIO $ writeList as arr
-  pure arr
+--------------------------------------------------------------------------------
+-- Lift1 API
+--------------------------------------------------------------------------------
+
+parameters {auto has : Lift1 s f}
+
+  ||| Allocates a new C-pointer of `sizeof a * n` bytes.
+  export %inline
+  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (CArray s n a)
+  malloc a n = lift1 (malloc1 a n)
+
+  ||| Like `malloc` but resets all allocated bytes to zero.
+  export %inline
+  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (CArray s n a)
+  calloc a n = lift1 (calloc1 a n)
+
+  ||| Frees the memory allocated for a C-array.
+  |||
+  ||| Note: Only call this if the C array is no longer used and has been
+  |||       allocated via a call to `malloc` or `alloc` (either in C land
+  |||       or in Idris). Afterwards, it is no longer safe to use the array
+  |||       for reading or writing, nor is it safe to call `free` on it again.
+  |||
+  |||       For safe resource management, use the linear version of
+  |||       C arrays if possible. Otherwise, consider using a safer monad
+  |||       than `IO` if possible.
+  export %inline
+  free : CArray s n a -> f ()
+  free arr = lift1 (free1 arr)
+
+  export %inline
+  fromList : SizeOf a => SetPtr a => (as : List a) -> f (CArray s (length as) a)
+  fromList as = Prelude.do
+    arr <- malloc a (length as)
+    lift1 $ writeList as arr
+    pure arr

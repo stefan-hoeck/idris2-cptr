@@ -127,23 +127,6 @@ export %inline
 unsafeWrap : AnyPtr -> CArray8 s n
 unsafeWrap = CA
 
-parameters {auto has : HasIO io}
-
-  ||| Allocates a new C-pointer of `sizeof a * n` bytes.
-  export %inline
-  malloc : (n : Nat) -> io (CArray8IO n)
-  malloc n = primIO $ MkIORes (CA $ prim__malloc (cast n))
-
-  ||| Like `malloc` but resets all allocated bytes to zero.
-  export %inline
-  calloc : (n : Nat) -> io (CArray8IO n)
-  calloc n =
-    primIO $ MkIORes (CA $ prim__calloc (cast n) 1)
-
-  export %inline
-  free : CArray8IO n -> io ()
-  free (CA p) = primIO $ prim__free p
-
 --------------------------------------------------------------------------------
 -- Linear API
 --------------------------------------------------------------------------------
@@ -236,12 +219,29 @@ withCArray n f =
         _ # t := Array8.free1 r t
      in v # t
 
-export %inline
-fromListIO :
-     {auto has : HasIO io}
-  -> (as : List Bits8)
-  -> io (CArray8IO (length as))
-fromListIO as = Prelude.do
-  arr <- Array8.malloc (length as)
-  runIO $ writeList as arr
-  pure arr
+--------------------------------------------------------------------------------
+-- Lift1 API
+--------------------------------------------------------------------------------
+
+parameters {auto has : Lift1 s f}
+
+  ||| Allocates a new C-pointer of `sizeof a * n` bytes.
+  export %inline
+  malloc : (n : Nat) -> f (CArray8 s n)
+  malloc n = lift1 (malloc1 n)
+
+  ||| Like `malloc` but resets all allocated bytes to zero.
+  export %inline
+  calloc : (n : Nat) -> f (CArray8 s n)
+  calloc n = lift1 (calloc1 n)
+
+  export %inline
+  free : CArray8 s n -> f ()
+  free arr = lift1 (free1 arr)
+
+  export %inline
+  fromList : (as : List Bits8) -> f (CArray8 s (length as))
+  fromList as = Prelude.do
+    arr <- Array8.malloc (length as)
+    lift1 $ writeList as arr
+    pure arr
