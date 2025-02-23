@@ -11,6 +11,7 @@ import Data.Vect
 import public Data.Fin
 import public Data.Linear.Token
 import public Data.Array.Index
+import public Data.C.Struct
 
 import Syntax.T1
 
@@ -20,13 +21,6 @@ import Syntax.T1
 -- FFI
 --------------------------------------------------------------------------------
 
-export %foreign "C:cptr_malloc, cptr-idris"
-                "scheme,chez:(lambda (x) (if (= 0 x) 0 (foreign-alloc x)))"
-prim__malloc : (size : Bits32) -> AnyPtr
-
-export %foreign "C:cptr_calloc, cptr-idris"
-prim__calloc : (n, size : Bits32) -> AnyPtr
-
 export %foreign "C_collect_safe:cptr_copy, cptr-idris"
 prim__copy_pp : AnyPtr -> AnyPtr -> Bits32 -> PrimIO ()
 
@@ -35,10 +29,6 @@ prim__copy_pb : AnyPtr -> Buffer -> Bits32 -> PrimIO ()
 
 export %foreign "C:cptr_copy, cptr-idris"
 prim__copy_bp : Buffer -> AnyPtr -> Bits32 -> PrimIO ()
-
-export %foreign "C:cptr_free, cptr-idris"
-                "scheme,chez:(lambda (x) (if (= 0 x) '() (foreign-free x)))"
-prim__free : AnyPtr -> PrimIO ()
 
 export %foreign "C:cptr_inc_ptr, cptr-idris"
                 "scheme,chez:(lambda (p x y) (+ p (* x y)))"
@@ -257,15 +247,32 @@ parameters {0 a      : Type}
   get : Deref a => Fin n -> F1 s a
   get x = ffi $ toPrim (deref $ prim__inc_ptr r.ptr (cast $ finToNat x) (sizeof a))
 
+  ||| Reads a struct from a C-pointer at the given position.
+  export %inline
+  getStruct : SizeOf (f s) => Struct f => Fin n -> F1 s (f s)
+  getStruct x t =
+    let ptr := prim__inc_ptr r.ptr (cast $ finToNat x) (sizeof $ f s)
+     in swrap ptr # t
+
   ||| Reads a value from a C-pointer at the given position.
   export %inline
   getIx : Deref a => (0 m : Nat) -> (x : Ix (S m) n) => F1 s a
   getIx m = get (ixToFin x)
 
+  ||| Reads a struct from a C-pointer at the given position.
+  export %inline
+  getStructIx : SizeOf (f s) => Struct f => (0 m : Nat) -> (x : Ix (S m) n) => F1 s (f s)
+  getStructIx m = getStruct (ixToFin x)
+
   ||| Reads a value from a C-pointer at the given position.
   export %inline
   getNat : Deref a => (m : Nat) -> (0 lt : LT m n) => F1 s a
   getNat m = get (natToFinLT m)
+
+  ||| Reads a struct from a C-pointer at the given position.
+  export %inline
+  getStructNat : SizeOf (f s) => Struct f => (m : Nat) -> (0 lt : LT m n) => F1 s (f s)
+  getStructNat m = getStruct (natToFinLT m)
 
   ||| Writes a value to a C pointer at the given position.
   export %inline
