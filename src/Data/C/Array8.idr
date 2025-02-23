@@ -1,7 +1,9 @@
 module Data.C.Array8
 
+import Control.Monad.Resource
 import Data.C.Integer
 import Data.C.Array
+import Data.Linear.ELift1
 import Data.Vect
 
 import public Data.Fin
@@ -245,3 +247,11 @@ parameters {auto has : Lift1 s f}
     arr <- Array8.malloc (length as)
     lift1 $ writeList as arr
     pure arr
+
+--------------------------------------------------------------------------------
+-- Resource
+--------------------------------------------------------------------------------
+
+export %inline
+ELift1 s f => Resource f (CArray8 s n) where
+  cleanup arr = lift1 (free1 arr)

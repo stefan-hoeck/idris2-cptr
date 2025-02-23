@@ -4,7 +4,7 @@ authors = "stefan-hoeck"
 brief   = "Fun with C-pointers"
 
 depends = base >= 0.6.0
-        , ref1
+        , elin
         , array
 
 modules = Data.C.Array
