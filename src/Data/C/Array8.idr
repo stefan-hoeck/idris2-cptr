@@ -20,10 +20,10 @@ prim__setbits8 : AnyPtr -> Integer -> Bits8 -> PrimIO ()
 export %foreign "scheme,chez:(lambda (x y) (foreign-ref 'unsigned-8 x y))"
 prim__getbits8 : AnyPtr -> Integer -> Bits8
 
-%foreign "C__collect_safe:cptr_dec8, cptr-idris"
+export %foreign "scheme,chez:(lambda (x y) (let ((cur (foreign-ref 'unsigned-8 x y))) (if (eq? 0 cur) (foreign-set! 'unsigned-8 x y 255) (foreign-set! 'unsigned-8 x y (- cur 1)))))"
 prim__dec : AnyPtr -> Bits32 -> PrimIO ()
 
-%foreign "C__collect_safe:cptr_inc8, cptr-idris"
+export %foreign "scheme,chez:(lambda (x y) (let ((cur (foreign-ref 'unsigned-8 x y))) (if (eq? 255 cur) (foreign-set! 'unsigned-8 x y 0) (foreign-set! 'unsigned-8 x y (+ cur 1)))))"
 prim__inc : AnyPtr -> Bits32 -> PrimIO ()
 
 --------------------------------------------------------------------------------
