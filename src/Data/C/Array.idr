@@ -21,7 +21,7 @@ import Syntax.T1
 -- FFI
 --------------------------------------------------------------------------------
 
-export %foreign "C_collect_safe:cptr_copy, cptr-idris"
+export %foreign "C__collect_safe:cptr_copy, cptr-idris"
 prim__copy_pp : AnyPtr -> AnyPtr -> Bits32 -> PrimIO ()
 
 export %foreign "C:cptr_copy, cptr-idris"
