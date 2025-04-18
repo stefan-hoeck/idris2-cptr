@@ -52,6 +52,9 @@ char *cptr_deref_str(void **ptr) { return ptr[0]; }
 
 uint8_t cptr_is_null(void **ptr) { return ptr[0] == NULL; }
 
+void *cptr_inc8(char *ptr, int ix) { ptr[ix] += 1;}
+void *cptr_dec8(char *ptr, int ix) { ptr[ix] -= 1;}
+
 void *cptr_set_bits8(void *ptr, uint8_t v) { ((uint8_t *)ptr)[0] = v; }
 
 void *cptr_set_bits16(void *ptr, uint16_t v) { ((uint16_t *)ptr)[0] = v; }

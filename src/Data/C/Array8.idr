@@ -20,6 +20,12 @@ prim__setbits8 : AnyPtr -> Integer -> Bits8 -> PrimIO ()
 export %foreign "scheme,chez:(lambda (x y) (foreign-ref 'unsigned-8 x y))"
 prim__getbits8 : AnyPtr -> Integer -> Bits8
 
+%foreign "C__collect_safe:cptr_dec8, cptr-idris"
+prim__dec : AnyPtr -> Bits32 -> PrimIO ()
+
+%foreign "C__collect_safe:cptr_inc8, cptr-idris"
+prim__inc : AnyPtr -> Bits32 -> PrimIO ()
+
 --------------------------------------------------------------------------------
 -- Immutable API
 --------------------------------------------------------------------------------
@@ -161,6 +167,16 @@ parameters {0 n      : Nat}
   get : Fin n -> F1 s Bits8
   get x t = prim__getbits8 r.ptr (cast $ finToNat x) # t
 
+  ||| Increase the given position by 1
+  export %inline
+  inc : Fin n -> F1' s
+  inc x = ffi (prim__inc r.ptr (believe_me x))
+
+  ||| Decrease the given position by 1
+  export %inline
+  dec : Fin n -> F1' s
+  dec x = ffi (prim__dec r.ptr (believe_me x))
+
   ||| Reads a value from a C-pointer at the given position.
   export %inline
   getIx : (0 m : Nat) -> (x : Ix (S m) n) => F1 s Bits8
@@ -185,6 +201,14 @@ parameters {0 n      : Nat}
   export %inline
   setNat : (m : Nat) -> (0 lt : LT m n) => Bits8 -> F1' s
   setNat m = set (natToFinLT m)
+
+  export %inline
+  incNat : (m : Nat) -> (0 lt : LT m n) => F1' s
+  incNat m = inc (natToFinLT m)
+
+  export %inline
+  decNat : (m : Nat) -> (0 lt : LT m n) => F1' s
+  decNat m = dec (natToFinLT m)
 
   writeVect1 : Vect k Bits8 -> Ix k n => F1' s
   writeVect1           []        t = () # t
