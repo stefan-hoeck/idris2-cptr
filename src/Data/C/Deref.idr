@@ -41,6 +41,9 @@ prim__deref_int64 : AnyPtr -> PrimIO Int64
 %foreign "C:cptr_deref_str, cptr-idris"
 prim__deref_str : AnyPtr -> PrimIO String
 
+%foreign "C:cptr_deref_anyptr, cptr-idris"
+prim__deref_anyptr : AnyPtr -> PrimIO AnyPtr
+
 %foreign "C:cptr_set_bits8, cptr-idris"
          "scheme,chez:(lambda (x y) (foreign-set! 'unsigned-8 x 0 y))"
 prim__set_bits8 : AnyPtr -> Bits8 -> PrimIO ()
@@ -75,6 +78,9 @@ prim__set_int64 : AnyPtr -> Int64 -> PrimIO ()
 
 %foreign "C:cptr_set_str, cptr-idris"
 prim__set_str : AnyPtr -> String -> PrimIO ()
+
+%foreign "C:cptr_set_anyptr, cptr-idris"
+prim__set_anyptr : AnyPtr -> AnyPtr -> PrimIO ()
 
 %foreign "C:cptr_set_null, cptr-idris"
 prim__set_null : AnyPtr -> PrimIO ()
@@ -124,6 +130,9 @@ Deref (Maybe String) where
       0 => Just <$> deref p
       _ => pure Nothing
 
+export %inline
+Deref AnyPtr where deref p = fromPrim $ prim__deref_anyptr p
+
 public export
 interface SetPtr a where
   setPtr : AnyPtr -> a -> IO ()
@@ -159,3 +168,6 @@ export %inline
 SetPtr (Maybe String) where
   setPtr p Nothing  = fromPrim $ prim__set_null p
   setPtr p (Just s) = setPtr p s
+
+export %inline
+SetPtr AnyPtr where setPtr p x = fromPrim $ prim__set_anyptr p x
