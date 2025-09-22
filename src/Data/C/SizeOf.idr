@@ -56,3 +56,7 @@ SizeOf String where
 public export %inline
 SizeOf (Maybe String) where
   sizeof_ = AnyPtrSize
+
+public export %inline
+SizeOf AnyPtr where
+  sizeof_ = AnyPtrSize

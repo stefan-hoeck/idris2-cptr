@@ -50,6 +50,8 @@ int64_t cptr_deref_int64(void *ptr) { return *(int64_t *)ptr; }
 
 char *cptr_deref_str(void **ptr) { return ptr[0]; }
 
+void *cptr_deref_anyptr(void **ptr) { return ptr[0]; }
+
 uint8_t cptr_is_null(void **ptr) { return ptr[0] == NULL; }
 
 void *cptr_set_bits8(void *ptr, uint8_t v) { ((uint8_t *)ptr)[0] = v; }
@@ -69,6 +71,8 @@ void *cptr_set_int32(void *ptr, int32_t v) { ((int32_t *)ptr)[0] = v; }
 void *cptr_set_int64(void *ptr, int64_t v) { ((int64_t *)ptr)[0] = v; }
 
 void *cptr_set_str(void **ptr, char *v) { ptr[0] = v; }
+
+void *cptr_set_anyptr(void **ptr, void *v) { ptr[0] = v; }
 
 void *cptr_set_null(void **ptr) { cptr_set_str(ptr, NULL); }
 
