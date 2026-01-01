@@ -380,3 +380,9 @@ parameters {auto has : Lift1 s f}
 export %inline
 ELift1 s f => Resource f (CArray s n a) where
   cleanup arr = lift1 (free1 arr)
+
+--------------------------------------------------------------------------------
+-- ScrubbedCArray
+--------------------------------------------------------------------------------
+
+
