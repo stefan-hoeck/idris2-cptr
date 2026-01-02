@@ -385,4 +385,13 @@ ELift1 s f => Resource f (CArray s n a) where
 -- ScrubbedCArray
 --------------------------------------------------------------------------------
 
+|||
+export
+record ScrubbedCArray : (s : Type) (n : Nat) (a : Type) where
+  constructor MkScrubbedCArray
+  arr   : CArray s n a
+  scrub : F1 s ()
 
+export %inline
+ELift1 s f => Resource f (ScrubbedCArray s n a) where
+  cleanup arr = lift1 (free1 arr)
