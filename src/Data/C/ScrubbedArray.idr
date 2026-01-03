@@ -17,6 +17,9 @@ import Syntax.T1
 
 %default total
 
+%hide Builtin.(#)
+%hide Builtin.DPair.(#)
+
 --------------------------------------------------------------------------------
 -- FFI
 --------------------------------------------------------------------------------
@@ -42,39 +45,51 @@ prim__inc_ptr : AnyPtr -> Bits32 -> Bits32 -> AnyPtr
 interface ScrubbingValue a where
   scrubbingvalue : a
 
+%inline
 ScrubbingValue Nat where
   scrubbingvalue = Z
 
+%inline
 ScrubbingValue Double where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Integer where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Int where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Int8 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Int16 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Int32 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Int64 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Bits8 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Bits16 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Bits32 where
   scrubbingvalue = 0
 
+%inline
 ScrubbingValue Bits64 where
   scrubbingvalue = 0
 
@@ -128,34 +143,6 @@ Box s = ScrubbedCArray s 1
 --------------------------------------------------------------------------------
 -- Linear API
 --------------------------------------------------------------------------------
-
-||| Allocates a new C-pointer of `sizeof a * n` bytes.
-export %inline
-malloc1 :
-     (0 a : Type)
-  -> {auto so : SizeOf a}
-  -> (n : Nat)
-  -> F1 s (ScrubbedCArray s n a)
-malloc1 a n t =
-  let p := prim__malloc (cast n * sizeof a)
-   in SCA p # t
-
-||| Like `malloc1` but resets all allocated bytes to zero.
-export %inline
-calloc1 :
-     (0 a : Type)
-  -> {auto so : SizeOf a}
-  -> (n : Nat)
-  -> F1 s (ScrubbedCArray s n a)
-calloc1 a n t =
-  let p := prim__calloc (cast n) (sizeof a)
-   in SCA p # t
-
-||| Frees the memory allocated for a C pointer and removes it from the
-||| resources bound to the linear token.
-export %inline
-free1 : (r : ScrubbedCArray s n a) -> F1' s
-free1 r = ffi (prim__free r.ptr)
 
 ||| Extracts the first value stored in a C pointer.
 export %inline
@@ -249,16 +236,16 @@ writeList as r = writeVect r (fromList as)
 ||| Overwrites a `ScrubbedCArray s n a`
 ||| with the `ScrubbingValue` implementation of `a`.
 private
-scrub :  {a : Type}
-      -> {n : Nat}
+scrub :  {n : Nat}
       -> ScrubbingValue a
       => SetPtr a
-      => SizeOf a
-      -> (arr : ScrubbedCArray s n a)
+      => ScrubbedCArray s n a
       -> F1' s
 scrub arr t = go arr n t
  where
-  go :  (arr : ScrubbedCArray s n a)
+  go :  {a : Type}
+     -> {n : Nat}
+     -> (arr : ScrubbedCArray s n a)
      -> (m : Nat)
      -> (0 lt : LT m n)
      -> F1' s
@@ -269,16 +256,55 @@ scrub arr t = go arr n t
      in go arr j t
 
 --------------------------------------------------------------------------------
+-- Allocating and Freeing Scrubbed C-arrays
+--------------------------------------------------------------------------------
+
+||| Allocates a new C-pointer of `sizeof a * n` bytes.
+export %inline
+malloc1 :
+     (0 a : Type)
+  -> {auto so : SizeOf a}
+  -> (n : Nat)
+  -> F1 s (ScrubbedCArray s n a)
+malloc1 a n t =
+  let p := prim__malloc (cast n * sizeof a)
+   in SCA p # t
+
+||| Like `malloc1` but resets all allocated bytes to zero.
+export %inline
+calloc1 :
+     (0 a : Type)
+  -> {auto so : SizeOf a}
+  -> (n : Nat)
+  -> F1 s (ScrubbedCArray s n a)
+calloc1 a n t =
+  let p := prim__calloc (cast n) (sizeof a)
+   in SCA p # t
+
+||| Frees the memory allocated, after overwriting the data,
+||| for a C pointer and removes it from the resources bound to the linear token.
+export %inline
+free1 :
+     {a : Type}
+  -> {n : Nat}
+  -> ScrubbingValue a
+  => SetPtr a
+  => (r : ScrubbedCArray s n a)
+  -> F1' s
+free1 r t =
+  let () # t := scrub r t
+    in ffi (prim__free r.ptr) t
+
+--------------------------------------------------------------------------------
 -- withScrubbedCArray
 --------------------------------------------------------------------------------
 
 ||| Similar to `withCArray` for `CArray`, but ensures
-||| that the allocated array is overwritten before it is freed.
+||| that the allocated array is overwritten before it is freed (see `free1`).
 export
-withScrubbedCArray : ScrubbingValue a => SetPtr a => (n : Nat) -> (f : forall s . ScrubbedCArray s n a -> F1 s b) -> F1' s
+withScrubbedCArray : {a : Type} -> ScrubbingValue a => SetPtr a => SizeOf a => (n : Nat) -> (f : forall s . ScrubbedCArray s n a -> F1 s b) -> F1' s
 withScrubbedCArray n f t =
   let r  # t := malloc1 a n t
       _  # t := f r t
-      () # t := scrub r t
       () # t := free1 r t
    in () # t
