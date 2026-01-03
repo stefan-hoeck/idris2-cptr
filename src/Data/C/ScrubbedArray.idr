@@ -236,24 +236,24 @@ writeList as r = writeVect r (fromList as)
 ||| Overwrites a `ScrubbedCArray s n a`
 ||| with the `ScrubbingValue` implementation of `a`.
 private
-scrub :  {n : Nat}
-      -> ScrubbingValue a
-      => SetPtr a
-      => ScrubbedCArray s n a
+scrub :  ScrubbedCArray s n a
       -> F1' s
-scrub arr t = go arr n t
+scrub arr t = go n arr t
  where
-  go :  {a : Type}
-     -> {n : Nat}
+  go :  {n : Nat}
+     -> {a : Type}
+     -> {auto so : SizeOf a}
+     -> ScrubbingValue a
+     => SetPtr a
+     => (m : Nat)
      -> (arr : ScrubbedCArray s n a)
-     -> (m : Nat)
      -> (0 lt : LT m n)
      -> F1' s
-  go _   Z     t =
+  go Z     _   t =
     () # t
-  go arr (S j) t =
-    let _ # t := setNat arr j (scrubbingvalue a) t
-     in go arr j t
+  go (S m) arr t =
+    let () # t := setNat arr m (scrubbingvalue a) t
+     in go m arr t
 
 --------------------------------------------------------------------------------
 -- Allocating and Freeing Scrubbed C-arrays
@@ -285,7 +285,7 @@ calloc1 a n t =
 ||| for a C pointer and removes it from the resources bound to the linear token.
 export %inline
 free1 :
-     {a : Type}
+     {0 a : Type}
   -> {n : Nat}
   -> ScrubbingValue a
   => SetPtr a
