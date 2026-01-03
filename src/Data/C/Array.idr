@@ -169,7 +169,7 @@ withPtr sz f = Prelude.do
 |||
 ||| See `CArray` for a pure version of mutable C arrays using linear types.
 ||| See `CArrayS` for a pure versoin of mutable C arrays using linear types (overwritting/scrubbing before freeing).
-||| See `CArrayIO` for a version of mutable C arrays usable in IO. 
+||| See `CArrayIO` for a version of mutable C arrays usable in IO.
 ||| See `CArrayIOS` for a version of the mutable C arrays usuable in IO (overwritting/scrubbing before freeing)
 |||
 ||| Note : In typical use cases, the memory allocated for a C array must
@@ -180,22 +180,22 @@ record PrimCArray (s : Type) (b : Bool) (n : Nat) (a : Type) where
   constructor PCA
   ptr : AnyPtr
 
-||| Convenience alias for `CArray`
+||| Convenience alias for `PrimCArray s False n a`
 public export
 0 CArray : (s : Type) -> (n : Nat) -> (a : Type) -> Type
 CArray s n a = PrimCArray s False n a
 
-||| Convenience alias for `CArrayS`
+||| Convenience alias for `PrimCArray s True n a`
 public export
 0 CArrayS : (s : Type) -> (n : Nat) -> (a : Type) -> Type
-CArrayS s n a = PrimCArray s True n a 
+CArrayS s n a = PrimCArray s True n a
 
-||| Convenience alias for `CArray' RIO`
+||| Convenience alias for `PrimCArray World False n a`
 public export
 0 CArrayIO : (n : Nat) -> (a : Type) -> Type
 CArrayIO n a = PrimCArray World False n a
 
-||| Convenience alias for `CArrayS' RIO`
+||| Convenience alias for `PrimCArray World True n a`
 public export
 0 CArrayIOS : (n : Nat) -> (a : Type) -> Type
 CArrayIOS n a = PrimCArray World True n a
