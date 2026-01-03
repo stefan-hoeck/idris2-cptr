@@ -1,6 +1,5 @@
 module Data.C.ScrubbedArray
 
-import Control.Monad.Resource
 import Data.Buffer
 import Data.C.Deref
 import Data.C.Integer
