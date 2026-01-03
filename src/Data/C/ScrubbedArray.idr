@@ -126,32 +126,6 @@ public export
 Box s = ScrubbedCArray s 1
 
 --------------------------------------------------------------------------------
--- Scrubbing
---------------------------------------------------------------------------------
-
-||| Overwrites a `ScrubbedCArray s n a`
-||| with the `ScrubbingValue` implementation of `a`.
-private
-scrub :  {a : Type}
-      -> {n : Nat}
-      -> ScrubbingValue a
-      => SetPtr a
-      => SizeOf a
-      -> (arr : ScrubbedCArray s n a)
-      -> F1' s
-scrub arr t = go arr n t
- where
-  go :  (arr : ScrubbedCArray s n a)
-     -> (m : Nat)
-     -> (0 lt : LT m n)
-     -> F1' s
-  go _   Z     t =
-    () # t
-  go arr (S j) t =
-    let _ # t := setNat arr j (scrubbingvalue a) t
-     in go arr j t
-
---------------------------------------------------------------------------------
 -- Linear API
 --------------------------------------------------------------------------------
 
@@ -267,6 +241,36 @@ writeList :
   -> (r        : ScrubbedCArray s (length as) a)
   -> F1' s
 writeList as r = writeVect r (fromList as)
+
+--------------------------------------------------------------------------------
+-- Scrubbing
+--------------------------------------------------------------------------------
+
+||| Overwrites a `ScrubbedCArray s n a`
+||| with the `ScrubbingValue` implementation of `a`.
+private
+scrub :  {a : Type}
+      -> {n : Nat}
+      -> ScrubbingValue a
+      => SetPtr a
+      => SizeOf a
+      -> (arr : ScrubbedCArray s n a)
+      -> F1' s
+scrub arr t = go arr n t
+ where
+  go :  (arr : ScrubbedCArray s n a)
+     -> (m : Nat)
+     -> (0 lt : LT m n)
+     -> F1' s
+  go _   Z     t =
+    () # t
+  go arr (S j) t =
+    let _ # t := setNat arr j (scrubbingvalue a) t
+     in go arr j t
+
+--------------------------------------------------------------------------------
+-- withScrubbedCArray
+--------------------------------------------------------------------------------
 
 ||| Similar to `withCArray` for `CArray`, but ensures
 ||| that the allocated array is overwritten before it is freed.
