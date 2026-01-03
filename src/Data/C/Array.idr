@@ -34,6 +34,9 @@ export %foreign "C:cptr_inc_ptr, cptr-idris"
                 "scheme,chez:(lambda (p x y) (+ p (* x y)))"
 prim__inc_ptr : AnyPtr -> Bits32 -> Bits32 -> AnyPtr
 
+export %foreign "C:cptr_scrub, cptr-idris"
+prim__scrub : AnyPtr -> Bits32 -> PrimIO ()
+
 --------------------------------------------------------------------------------
 -- Immutable API
 --------------------------------------------------------------------------------
@@ -165,20 +168,37 @@ withPtr sz f = Prelude.do
 ||| Reading from and writing to such an array is O(1) and runs in `IO`.
 |||
 ||| See `CArray` for a pure version of mutable C arrays using linear types.
-||| See `CArrayIO` for a version of mutable C arrays usable in IO.
+||| See `CArrayS` for a pure versoin of mutable C arrays using linear types (overwritting/scrubbing before freeing).
+||| See `CArrayIO` for a version of mutable C arrays usable in IO. 
+||| See `CArrayIOS` for a version of the mutable C arrays usuable in IO (overwritting/scrubbing before freeing)
 |||
 ||| Note : In typical use cases, the memory allocated for a C array must
 |||        be manually released with a call to `free` unless it is part
 |||        of a larger structure `Struct` or managed by an external library.
 export
-record CArray (s : Type) (n : Nat) (a : Type) where
-  constructor CA
+record PrimCArray (s : Type) (b : Bool) (n : Nat) (a : Type) where
+  constructor PCA
   ptr : AnyPtr
+
+||| Convenience alias for `CArray`
+public export
+0 CArray : (s : Type) -> (n : Nat) -> (a : Type) -> Type
+CArray s n a = PrimCArray s False n a
+
+||| Convenience alias for `CArrayS`
+public export
+0 CArrayS : (s : Type) -> (n : Nat) -> (a : Type) -> Type
+CArrayS s n a = PrimCArray s True n a 
 
 ||| Convenience alias for `CArray' RIO`
 public export
-0 CArrayIO : Nat -> Type -> Type
-CArrayIO = CArray World
+0 CArrayIO : (n : Nat) -> (a : Type) -> Type
+CArrayIO n a = PrimCArray World False n a
+
+||| Convenience alias for `CArrayS' RIO`
+public export
+0 CArrayIOS : (n : Nat) -> (a : Type) -> Type
+CArrayIOS n a = PrimCArray World True n a
 
 public export %inline
 {n : Nat} -> SizeOf a => SizeOf (CArray s n a) where
@@ -190,7 +210,7 @@ unsafeUnwrap = ptr
 
 export %inline
 unsafeWrap : AnyPtr -> CArray s n a
-unsafeWrap = CA
+unsafeWrap = PCA
 
 public export
 0 IOBox : Type -> Type
@@ -213,7 +233,7 @@ malloc1 :
   -> F1 s (CArray s n a)
 malloc1 a n t =
   let p := prim__malloc (cast n * sizeof a)
-   in CA p # t
+   in PCA p # t
 
 ||| Like `malloc1` but resets all allocated bytes to zero.
 export %inline
@@ -224,13 +244,21 @@ calloc1 :
   -> F1 s (CArray s n a)
 calloc1 a n t =
   let p := prim__calloc (cast n) (sizeof a)
-   in CA p # t
+   in PCA p # t
 
 ||| Frees the memory allocated for a C pointer and removes it from the
 ||| resources bound to the linear token.
 export %inline
 free1 : (r : CArray s n a) -> F1' s
 free1 r = ffi (prim__free r.ptr)
+
+||| Frees the memory allocated for a C pointer, after overwriting the data,
+||| and removes it from the resources bound to the linear token.
+export %inline
+frees1 : {a : Type} -> {auto so : SizeOf a} -> {n : Nat} -> (r : CArrayS s n a) -> F1' s
+frees1 r t =
+  let () # t := ffi (prim__scrub r.ptr (cast n * sizeof a)) t
+   in ffi (prim__free r.ptr) t
 
 ||| Extracts the first value stored in a C pointer.
 export %inline

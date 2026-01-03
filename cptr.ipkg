@@ -12,7 +12,6 @@ modules = Data.C.Array
         , Data.C.Deref
         , Data.C.Integer
         , Data.C.Ptr
-        , Data.C.ScrubbedArray
         , Data.C.SizeOf
         , Data.C.Struct
 
