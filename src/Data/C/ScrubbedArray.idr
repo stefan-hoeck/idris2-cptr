@@ -102,8 +102,8 @@ ScrubbingValue Bits64 where
 |||
 ||| Reading from and writing to such an array is O(1) and runs in `IO`.
 |||
-||| See `CArray` for a pure version of mutable C arrays using linear types.
-||| See `CArrayIO` for a version of mutable C arrays usable in IO.
+||| See `ScrubbedCArray` for a pure version of mutable C arrays using linear types.
+||| See `ScrubbedCArrayIO` for a version of mutable C arrays usable in IO.
 |||
 ||| Note : In typical use cases, the memory allocated for a C array must
 |||        be manually released with a call to `free` unless it is part
