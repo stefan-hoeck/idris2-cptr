@@ -19,6 +19,7 @@ prop_scrub = do
            () # t := writeList vs r t
            () # t := ffi (prim__scrub (unsafeUnwrap r) (cast (length vs) * sizeof Bits8)) t
            r' # t := withIArray r toVect t
+           () # t := free1 r t
         in toList r' # t ) === [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
 export
