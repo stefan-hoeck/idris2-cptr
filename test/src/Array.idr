@@ -7,8 +7,6 @@ import Data.SOP
 import Data.Vect
 import Hedgehog
 
-import Syntax.T1
-
 %default total
 
 prop_scrub : Property
