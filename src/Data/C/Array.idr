@@ -255,7 +255,7 @@ free1 r = ffi (prim__free r.ptr)
 ||| Frees the memory allocated for a C pointer, after overwriting the data,
 ||| and removes it from the resources bound to the linear token.
 export %inline
-frees1 : {a : Type} -> {auto so : SizeOf a} -> {n : Nat} -> (r : CArrayS s n a) -> F1' s
+frees1 : {0 a : Type} -> {auto so : SizeOf a} -> {n : Nat} -> (r : CArrayS s n a) -> F1' s
 frees1 r t =
   let () # t := ffi (prim__scrub r.ptr (cast n * sizeof a)) t
    in ffi (prim__free r.ptr) t
