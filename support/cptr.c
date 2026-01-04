@@ -79,3 +79,14 @@ void *cptr_set_null(void **ptr) { cptr_set_str(ptr, NULL); }
 struct timespec *cptr_allocTimespec() {
   return cptr_calloc(1, sizeof(struct timespec));
 }
+
+void cptr_scrub(void *ptr, size_t len) {
+  if (ptr == NULL || len == 0) {
+    return;
+  }
+
+  volatile uint8_t *p = (volatile uint8_t *)ptr;
+  for (size_t i = 0; i < len; i++) {
+    p[i] = 0;
+  }
+}
