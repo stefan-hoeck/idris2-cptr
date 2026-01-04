@@ -81,7 +81,9 @@ struct timespec *cptr_allocTimespec() {
 }
 
 void cptr_scrub(void *ptr, size_t len) {
-  if (ptr == NULL || len == 0) return;
+  if (ptr == NULL || len == 0) {
+    return;
+  }
 
   volatile uint8_t *p = (volatile uint8_t *)ptr;
   for (size_t i = 0; i < len; i++) {
