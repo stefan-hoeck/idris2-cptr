@@ -18,4 +18,4 @@ version:
 
 .PHONY: integer_gen
 integer_gen:
-	$(CC) $(LDFLAGS) -o integer_gen integer.c
+	$(CC) -o integer_gen integer.c $(LDFLAGS)
