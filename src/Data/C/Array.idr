@@ -361,7 +361,13 @@ writeList as r = writeVect r (fromList as)
 ||| The Boolean index is erased because cleanup behavior
 ||| is supplied explicitly rather than selected by inspecting b.
 export
-withPrimCArray : SizeOf a => {0 b : Bool} -> (n : Nat) -> (release : forall s . PrimCArray s b n a -> F1' s) -> (f : forall s . PrimCArray s b n a -> F1 s c) -> c
+withPrimCArray :
+     SizeOf a
+  => {0 b : Bool}
+  -> (n : Nat)
+  -> (release : forall s . PrimCArray s b n a -> F1' s)
+  -> (f : forall s . PrimCArray s b n a -> F1 s c)
+  -> c
 withPrimCArray n release f =
   run1 $ \t =>
     let r  # t := malloc1 a n t
@@ -372,14 +378,22 @@ withPrimCArray n release f =
 ||| Allocates a C array, runs a computation, and frees
 ||| the underlying memory afterward.
 export
-withCArray : SizeOf a => (n : Nat) -> (f : forall s . CArray s n a -> F1 s b) -> b
+withCArray :
+     SizeOf a
+  => (n : Nat)
+  -> (f : forall s . CArray s n a -> F1 s b)
+  -> b
 withCArray n f =
   withPrimCArray n free1 f
 
 ||| Allocates a C array, runs a computation, and securely
 ||| scrubs the underlying memory before freeing it.
 export
-withCArrayS : SizeOf a => (n : Nat) -> (f : forall s . CArrayS s n a -> F1 s b) -> b
+withCArrayS :
+     SizeOf a
+  => (n : Nat)
+  -> (f : forall s . CArrayS s n a -> F1 s b)
+  -> b
 withCArrayS n f =
   withPrimCArray n frees1 f
 
