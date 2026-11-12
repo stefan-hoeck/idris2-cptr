@@ -230,7 +230,7 @@ malloc1 :
      (0 a : Type)
   -> {auto so : SizeOf a}
   -> (n : Nat)
-  -> F1 s (CArray s n a)
+  -> F1 s (PrimCArray s b n a)
 malloc1 a n t =
   let p := prim__malloc (cast n * sizeof a)
    in PCA p # t
@@ -241,28 +241,28 @@ calloc1 :
      (0 a : Type)
   -> {auto so : SizeOf a}
   -> (n : Nat)
-  -> F1 s (CArray s n a)
+  -> F1 s (PrimCArray s b n a)
 calloc1 a n t =
   let p := prim__calloc (cast n) (sizeof a)
    in PCA p # t
 
-||| Frees the memory allocated for a C pointer and removes it from the
-||| resources bound to the linear token.
+||| Frees the memory allocated for a C pointer.
+||| Depending on `b` of `PrimCArray s b n a`, this function
+||| will either simply free memory allocated for a C pointer,
+||| or it will free memory allocated for a C pointer,
+||| after overwriting the data.
+||| Following this, it will remove the C pointer from
+||| the resources bound to the linear token.
 export %inline
-free1 : (r : CArray s n a) -> F1' s
-free1 r = ffi (prim__free r.ptr)
-
-||| Frees the memory allocated for a C pointer, after overwriting the data,
-||| and removes it from the resources bound to the linear token.
-export %inline
-frees1 : {0 a : Type} -> {auto so : SizeOf a} -> {n : Nat} -> (r : CArrayS s n a) -> F1' s
-frees1 r t =
+free1 : {0 a : Type} -> {auto so : SizeOf a} -> {b : Bool} -> {n : Nat} -> (r : PrimCArray s b n a) -> F1' s
+free1 {b=False} r t = ffi (prim__free r.ptr) t
+free1 {b=True}  r t =
   let () # t := ffi (prim__scrub r.ptr (cast n * sizeof a)) t
    in ffi (prim__free r.ptr) t
 
 ||| Extracts the first value stored in a C pointer.
 export %inline
-unbox : Deref a => (r : CArray s (S n) a) -> F1 s a
+unbox : Deref a => (r : PrimCArray s b (S n) a) -> F1 s a
 unbox r = ffi $ toPrim (deref r.ptr)
 
 parameters {0 f      : Type -> Type}
@@ -270,7 +270,7 @@ parameters {0 f      : Type -> Type}
            {0 s      : Type}
            {auto sr  : Struct f}
            {auto so  : SizeOf (f s)}
-           (r        : CArray s n (f s))
+           (r        : PrimCArray s b n (f s))
 
   ||| Reads a struct from a C-pointer at the given position.
   export %inline
@@ -292,7 +292,7 @@ parameters {0 f      : Type -> Type}
 parameters {0 a      : Type}
            {0 n      : Nat}
            {auto so  : SizeOf a}
-           (r        : CArray s n a)
+           (r        : PrimCArray s b n a)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
@@ -342,7 +342,7 @@ parameters {0 a      : Type}
   ||| immutable array by storing it in a mutable reference. It is
   ||| referentially transparent, because we call it from a linear context.
   export %inline
-  withIArray : (CIArray n a -> b) -> F1 s b
+  withIArray : (CIArray n a -> c) -> F1 s c
   withIArray f t = f (IA r.ptr) # t
 
 ||| Writes the values from a list to a C pointer
@@ -351,12 +351,12 @@ writeList :
      {auto so  : SizeOf a}
   -> {auto sp  : SetPtr a}
   -> (as       : List a)
-  -> (r        : CArray s (length as) a)
+  -> (r        : PrimCArray s b (length as) a)
   -> F1' s
 writeList as r = writeVect r (fromList as)
 
 export
-withCArray : SizeOf a => (n : Nat) -> (f : forall s . CArray s n a -> F1 s b) -> b
+withCArray : SizeOf a => {b : Bool} -> (n : Nat) -> (f : forall s . PrimCArray s b n a -> F1 s c) -> c
 withCArray n f =
   run1 $ \t =>
     let r # t := malloc1 a n t
@@ -372,12 +372,12 @@ parameters {auto has : Lift1 s f}
 
   ||| Allocates a new C-pointer of `sizeof a * n` bytes.
   export %inline
-  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (CArray s n a)
+  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (PrimCArray s b n a)
   malloc a n = lift1 (malloc1 a n)
 
   ||| Like `malloc` but resets all allocated bytes to zero.
   export %inline
-  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (CArray s n a)
+  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (PrimCArray s b n a)
   calloc a n = lift1 (calloc1 a n)
 
   ||| Frees the memory allocated for a C-array.
@@ -391,11 +391,11 @@ parameters {auto has : Lift1 s f}
   |||       C arrays if possible. Otherwise, consider using a safer monad
   |||       than `IO` if possible.
   export %inline
-  free : CArray s n a -> f ()
+  free : SizeOf a => {b : Bool} -> {n : Nat} -> PrimCArray s b n a -> f ()
   free arr = lift1 (free1 arr)
 
   export %inline
-  fromList : SizeOf a => SetPtr a => (as : List a) -> f (CArray s (length as) a)
+  fromList : SizeOf a => SetPtr a => (as : List a) -> f (PrimCArray s b (length as) a)
   fromList as = Prelude.do
     arr <- malloc a (length as)
     lift1 $ writeList as arr
@@ -406,5 +406,5 @@ parameters {auto has : Lift1 s f}
 --------------------------------------------------------------------------------
 
 export %inline
-ELift1 s f => Resource f (CArray s n a) where
+{b : Bool} -> {n : Nat} -> ELift1 s f => SizeOf a => Resource f (PrimCArray s b n a) where
   cleanup arr = lift1 (free1 arr)

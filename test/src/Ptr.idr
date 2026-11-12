@@ -17,15 +17,15 @@ parameters {0 a : Type}
            {auto df : Deref a}
            {auto sp : SetPtr a}
 
-  setGet : (n : Nat) -> Fin n -> a -> a
-  setGet n x v =
-    withCArray n $ \r => T1.do
+  setGet : {b : Bool} -> (n : Nat) -> Fin n -> a -> a
+  setGet {b} n x v =
+    withCArray {b} n $ \r => T1.do
       set r x v
       get r x
 
-  fromToList : List a -> List a
-  fromToList as =
-    withCArray (length as) $ \r => T1.do
+  fromToList : {b : Bool} -> List a -> List a
+  fromToList {b} as =
+    withCArray {b} (length as) $ \r => T1.do
       writeVect r (fromList as)
       v <- withIArray r toVect
       pure (toList v)
@@ -34,7 +34,14 @@ parameters {0 a : Type}
   roundTrip as = property $ do
     [n,v] <- forAll $ np [nat (linear 0 100), as]
     x     <- forAll $ fin (linearFin n)
-    setGet (S n) x v === v
+    setGet {b = False} (S n) x v === v
+    setGet {b = True}  (S n) x v === v
+
+  roundTripList : Show a => Eq a => Gen (List a) -> Property
+  roundTripList as = property $ do
+    vs <- forAll as
+    fromToList {b = False} vs === vs
+    fromToList {b = True}  vs === vs
 
 prop_bits8 : Property
 prop_bits8 = roundTrip anyBits8
@@ -71,15 +78,11 @@ prop_strMaybe = roundTrip (maybe anyStr)
 
 prop_strList : Property
 prop_strList =
-  property $ do
-    vs <- forAll (list (linear 0 20) anyStr)
-    fromToList vs === vs
+  roundTripList (list (linear 0 20) anyStr)
 
 prop_strMaybeList : Property
 prop_strMaybeList =
-  property $ do
-    vs <- forAll (list (linear 0 20) (maybe anyStr))
-    fromToList vs === vs
+ roundTripList (list (linear 0 20) (maybe anyStr))
 
 export
 props : Group
