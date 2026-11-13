@@ -230,7 +230,7 @@ malloc1 :
      (0 a : Type)
   -> {auto so : SizeOf a}
   -> (n : Nat)
-  -> F1 s (CArray s n a)
+  -> F1 s (PrimCArray s b n a)
 malloc1 a n t =
   let p := prim__malloc (cast n * sizeof a)
    in PCA p # t
@@ -241,19 +241,19 @@ calloc1 :
      (0 a : Type)
   -> {auto so : SizeOf a}
   -> (n : Nat)
-  -> F1 s (CArray s n a)
+  -> F1 s (PrimCArray s b n a)
 calloc1 a n t =
   let p := prim__calloc (cast n) (sizeof a)
    in PCA p # t
 
-||| Frees the memory allocated for a C pointer and removes it from the
-||| resources bound to the linear token.
+||| Frees the memory allocated for a C array without
+||| overwriting its contents.
 export %inline
 free1 : (r : CArray s n a) -> F1' s
 free1 r = ffi (prim__free r.ptr)
 
-||| Frees the memory allocated for a C pointer, after overwriting the data,
-||| and removes it from the resources bound to the linear token.
+||| Overwrites the contents of a C array before freeing
+||| the underlying memory.
 export %inline
 frees1 : {0 a : Type} -> {auto so : SizeOf a} -> {n : Nat} -> (r : CArrayS s n a) -> F1' s
 frees1 r t =
@@ -262,7 +262,7 @@ frees1 r t =
 
 ||| Extracts the first value stored in a C pointer.
 export %inline
-unbox : Deref a => (r : CArray s (S n) a) -> F1 s a
+unbox : Deref a => (r : PrimCArray s b (S n) a) -> F1 s a
 unbox r = ffi $ toPrim (deref r.ptr)
 
 parameters {0 f      : Type -> Type}
@@ -270,7 +270,7 @@ parameters {0 f      : Type -> Type}
            {0 s      : Type}
            {auto sr  : Struct f}
            {auto so  : SizeOf (f s)}
-           (r        : CArray s n (f s))
+           (r        : PrimCArray s b n (f s))
 
   ||| Reads a struct from a C-pointer at the given position.
   export %inline
@@ -292,7 +292,7 @@ parameters {0 f      : Type -> Type}
 parameters {0 a      : Type}
            {0 n      : Nat}
            {auto so  : SizeOf a}
-           (r        : CArray s n a)
+           (r        : PrimCArray s b n a)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
@@ -342,7 +342,7 @@ parameters {0 a      : Type}
   ||| immutable array by storing it in a mutable reference. It is
   ||| referentially transparent, because we call it from a linear context.
   export %inline
-  withIArray : (CIArray n a -> b) -> F1 s b
+  withIArray : (CIArray n a -> c) -> F1 s c
   withIArray f t = f (IA r.ptr) # t
 
 ||| Writes the values from a list to a C pointer
@@ -351,18 +351,51 @@ writeList :
      {auto so  : SizeOf a}
   -> {auto sp  : SetPtr a}
   -> (as       : List a)
-  -> (r        : CArray s (length as) a)
+  -> (r        : PrimCArray s b (length as) a)
   -> F1' s
 writeList as r = writeVect r (fromList as)
 
+||| Allocates a C array, runs a computation, and releases
+||| the array using the supplied cleanup operation.
+|||
+||| The Boolean index is erased because cleanup behavior
+||| is supplied explicitly rather than selected by inspecting b.
 export
-withCArray : SizeOf a => (n : Nat) -> (f : forall s . CArray s n a -> F1 s b) -> b
-withCArray n f =
+withPrimCArray :
+     SizeOf a
+  => {0 b : Bool}
+  -> (n : Nat)
+  -> (release : forall s . PrimCArray s b n a -> F1' s)
+  -> (f : forall s . PrimCArray s b n a -> F1 s c)
+  -> c
+withPrimCArray n release f =
   run1 $ \t =>
-    let r # t := malloc1 a n t
-        v # t := f r t
-        _ # t := free1 r t
+    let r  # t := malloc1 a n t
+        v  # t := f r t
+        () # t := release r t
      in v # t
+
+||| Allocates a C array, runs a computation, and frees
+||| the underlying memory afterward.
+export
+withCArray :
+     SizeOf a
+  => (n : Nat)
+  -> (f : forall s . CArray s n a -> F1 s b)
+  -> b
+withCArray n f =
+  withPrimCArray n free1 f
+
+||| Allocates a C array, runs a computation, and securely
+||| scrubs the underlying memory before freeing it.
+export
+withCArrayS :
+     SizeOf a
+  => (n : Nat)
+  -> (f : forall s . CArrayS s n a -> F1 s b)
+  -> b
+withCArrayS n f =
+  withPrimCArray n frees1 f
 
 --------------------------------------------------------------------------------
 -- Lift1 API
@@ -372,15 +405,15 @@ parameters {auto has : Lift1 s f}
 
   ||| Allocates a new C-pointer of `sizeof a * n` bytes.
   export %inline
-  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (CArray s n a)
+  malloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (PrimCArray s b n a)
   malloc a n = lift1 (malloc1 a n)
 
   ||| Like `malloc` but resets all allocated bytes to zero.
   export %inline
-  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (CArray s n a)
+  calloc : (0 a : Type) -> SizeOf a => (n : Nat) -> f (PrimCArray s b n a)
   calloc a n = lift1 (calloc1 a n)
 
-  ||| Frees the memory allocated for a C-array.
+  ||| Frees a C array without scrubbing its contents.
   |||
   ||| Note: Only call this if the C array is no longer used and has been
   |||       allocated via a call to `malloc` or `alloc` (either in C land
@@ -394,8 +427,22 @@ parameters {auto has : Lift1 s f}
   free : CArray s n a -> f ()
   free arr = lift1 (free1 arr)
 
+  ||| Scrubs and frees a C array.
+  |||
+  ||| Note: Only call this if the C array is no longer used and has been
+  |||       allocated via a call to `malloc` or `alloc` (either in C land
+  |||       or in Idris). Afterwards, it is no longer safe to use the array
+  |||       for reading or writing, nor is it safe to call `free` on it again.
+  |||
+  |||       For safe resource management, use the linear version of
+  |||       C arrays if possible. Otherwise, consider using a safer monad
+  |||       than `IO` if possible.
   export %inline
-  fromList : SizeOf a => SetPtr a => (as : List a) -> f (CArray s (length as) a)
+  frees : {n : Nat} -> SizeOf a => CArrayS s n a -> f ()
+  frees arr = lift1 (frees1 arr)
+
+  export %inline
+  fromList : SizeOf a => SetPtr a => (as : List a) -> f (PrimCArray s b (length as) a)
   fromList as = Prelude.do
     arr <- malloc a (length as)
     lift1 $ writeList as arr
@@ -408,3 +455,7 @@ parameters {auto has : Lift1 s f}
 export %inline
 ELift1 s f => Resource f (CArray s n a) where
   cleanup arr = lift1 (free1 arr)
+
+export %inline
+{n : Nat} -> ELift1 s f => SizeOf a => Resource f (CArrayS s n a) where
+  cleanup arr = lift1 (frees1 arr)
