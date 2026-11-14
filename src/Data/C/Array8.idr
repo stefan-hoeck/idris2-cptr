@@ -108,18 +108,46 @@ foldl : {n : _} -> (b -> Bits8 -> b) -> b -> CIArray8 n -> b
 foldl = foldlI n
 
 --------------------------------------------------------------------------------
--- IO-API
+-- Mutable C Arrays
 --------------------------------------------------------------------------------
 
+||| A wrapped pointer to a C-array holding `n` unsigned 8-bit
+||| values (C-primitive).
+|||
+||| Reading from and writing to such an array is O(1) and runs in `IO`.
+|||
+||| See `CArray8` for a pure version of mutable C arrays using linear types.
+||| See `CArray8S` for a pure versoin of mutable C arrays using linear types (overwritting/scrubbing before freeing).
+||| See `CArray8IO` for a version of mutable C arrays usable in IO.
+||| See `CArray8IOS` for a version of the mutable C arrays usuable in IO (overwritting/scrubbing before freeing)
+|||
+||| Note : In typical use cases, the memory allocated for a C array must
+|||        be manually released with a call to `free` unless it is part
+|||        of a larger structure `Struct` or managed by an external library.
 export
-record CArray8 (s : Type) (n : Nat) where
-  constructor CA
+record PrimCArray8 (s : Type) (b : Bool) (n : Nat) where
+  constructor PCA8
   ptr : AnyPtr
 
-||| Convenience alias for `CArray8' RIO`
+||| Convenience alias for `PrimCArray8 s False n a`
 public export
-0 CArray8IO : Nat -> Type
-CArray8IO = CArray8 World
+0 CArray8 : (s : Type) -> (n : Nat) -> Type
+CArray8 s n = PrimCArray8 s False n
+
+||| Convenience alias for `PrimCArray8 s True n a`
+public export
+0 CArray8S : (s : Type) -> (n : Nat) -> Type
+CArray8S s n = PrimCArray8 s True n
+
+||| Convenience alias for `PrimCArray8 World False n a`
+public export
+0 CArray8IO : (n : Nat) -> Type
+CArray8IO n = PrimCArray8 World False n
+
+||| Convenience alias for `PrimCArray8 World True n a`
+public export
+0 CArray8IOS : (n : Nat) -> Type
+CArray8IOS n = PrimCArray8 World True n
 
 export %inline
 unsafeUnwrap : CArray8 s n -> AnyPtr
@@ -127,7 +155,7 @@ unsafeUnwrap = ptr
 
 export %inline
 unsafeWrap : AnyPtr -> CArray8 s n
-unsafeWrap = CA
+unsafeWrap = PCA8
 
 --------------------------------------------------------------------------------
 -- Linear API
@@ -135,26 +163,34 @@ unsafeWrap = CA
 
 ||| Allocates a new C-pointer of `sizeof a * n` bytes.
 export %inline
-malloc1 : (n : Nat) -> F1 s (CArray8 s n)
+malloc1 : (n : Nat) -> F1 s (PrimCArray8 s b n)
 malloc1 n t =
   let p := prim__malloc (cast n)
-   in CA p # t
+   in PCA8 p # t
 
 ||| Like `malloc1` but resets all allocated bytes to zero.
 export %inline
-calloc1 : (n : Nat) -> F1 s (CArray8 s n)
+calloc1 : (n : Nat) -> F1 s (PrimCArray8 s b n)
 calloc1 n t =
   let p := prim__calloc (cast n) 1
-   in CA p # t
+   in PCA8 p # t
 
-||| Frees the memory allocated for a C pointer and removes it from the
-||| resources bound to the linear token.
+||| Frees the memory allocated for a C array without
+||| overwriting its contents.
 export %inline
 free1 : (r : CArray8 s n) -> F1' s
 free1 r = ffi (prim__free r.ptr)
 
+||| Overwrites the contents of a C array before freeing
+||| the underlying memory.
+export %inline
+frees1 : {n : Nat} -> (r : CArray8S s n) -> F1' s
+frees1 {n} r t =
+  let () # t := ffi (prim__scrub r.ptr (cast n)) t
+   in ffi (prim__free r.ptr) t
+
 parameters {0 n      : Nat}
-           (r        : CArray8 s n)
+           (r        : PrimCArray8 s b n)
 
   ||| Reads a value from a C-pointer at the given position.
   export %inline
@@ -204,22 +240,52 @@ parameters {0 n      : Nat}
   ||| immutable array by storing it in a mutable reference. It is
   ||| referentially transparent, because we call it from a linear context.
   export %inline
-  withIArray : (CIArray8 n -> b) -> F1 s b
+  withIArray : (CIArray8 n -> c) -> F1 s c
   withIArray f t = f (IA r.ptr) # t
 
 ||| Writes the values from a list to a C pointer
 export %inline
-writeList : (as : List Bits8) -> CArray8 s (length as) -> F1' s
+writeList : (as : List Bits8) -> PrimCArray8 s b (length as) -> F1' s
 writeList as r = writeVect r (fromList as)
 
+||| Allocates a C array, runs a computation, and releases
+||| the array using the supplied cleanup operation.
+|||
+||| The Boolean index is erased because cleanup behavior
+||| is supplied explicitly rather than selected by inspecting b.
 export
-withCArray : (n : Nat) -> (f : forall s . CArray8 s n -> F1 s b) -> b
-withCArray n f =
+withPrimCArray8 :
+     {0 b : Bool}
+  -> (n : Nat)
+  -> (release : forall s . PrimCArray8 s b n -> F1' s)
+  -> (f : forall s . PrimCArray8 s b n -> F1 s c)
+  -> c
+withPrimCArray8 n release f =
   run1 $ \t =>
-    let r # t := Array8.malloc1 n t
-        v # t := f r t
-        _ # t := Array8.free1 r t
+    let r  # t := Array8.malloc1 n t
+        v  # t := f r t
+        () # t := release r t
      in v # t
+
+||| Allocates a C array, runs a computation, and frees
+||| the underlying memory afterward.
+export
+withCArray :
+     (n : Nat)
+  -> (f : forall s . CArray8 s n -> F1 s b)
+  -> b
+withCArray n f =
+  withPrimCArray8 n free1 f
+
+||| Allocates a C array, runs a computation, and securely
+||| scrubs the underlying memory before freeing it.
+export
+withCArrayS :
+     (n : Nat)
+  -> (f : forall s . CArray8S s n -> F1 s b)
+  -> b
+withCArrayS n f =
+  withPrimCArray8 n frees1 f
 
 --------------------------------------------------------------------------------
 -- Lift1 API
@@ -229,20 +295,44 @@ parameters {auto has : Lift1 s f}
 
   ||| Allocates a new C-pointer of `sizeof a * n` bytes.
   export %inline
-  malloc : (n : Nat) -> f (CArray8 s n)
+  malloc : (n : Nat) -> f (PrimCArray8 s b n)
   malloc n = lift1 (malloc1 n)
 
   ||| Like `malloc` but resets all allocated bytes to zero.
   export %inline
-  calloc : (n : Nat) -> f (CArray8 s n)
+  calloc : (n : Nat) -> f (PrimCArray8 s b n)
   calloc n = lift1 (calloc1 n)
 
+  ||| Frees a C array without scrubbing its contents.
+  |||
+  ||| Note: Only call this if the C array is no longer used and has been
+  |||       allocated via a call to `malloc` or `alloc` (either in C land
+  |||       or in Idris). Afterwards, it is no longer safe to use the array
+  |||       for reading or writing, nor is it safe to call `free` on it again.
+  |||
+  |||       For safe resource management, use the linear version of
+  |||       C arrays if possible. Otherwise, consider using a safer monad
+  |||       than `IO` if possible.
   export %inline
   free : CArray8 s n -> f ()
   free arr = lift1 (free1 arr)
 
+  ||| Scrubs and frees a C array.
+  |||
+  ||| Note: Only call this if the C array is no longer used and has been
+  |||       allocated via a call to `malloc` or `alloc` (either in C land
+  |||       or in Idris). Afterwards, it is no longer safe to use the array
+  |||       for reading or writing, nor is it safe to call `free` on it again.
+  |||
+  |||       For safe resource management, use the linear version of
+  |||       C arrays if possible. Otherwise, consider using a safer monad
+  |||       than `IO` if possible.
   export %inline
-  fromList : (as : List Bits8) -> f (CArray8 s (length as))
+  frees : {n : Nat} -> CArray8S s n -> f ()
+  frees arr = lift1 (frees1 arr)
+
+  export %inline
+  fromList : (as : List Bits8) -> f (PrimCArray8 s b (length as))
   fromList as = Prelude.do
     arr <- Array8.malloc (length as)
     lift1 $ writeList as arr
@@ -255,3 +345,7 @@ parameters {auto has : Lift1 s f}
 export %inline
 ELift1 s f => Resource f (CArray8 s n) where
   cleanup arr = lift1 (free1 arr)
+
+export %inline
+{n : Nat} -> ELift1 s f => Resource f (CArray8S s n) where
+  cleanup arr = lift1 (frees1 arr)
